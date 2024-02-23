@@ -236,7 +236,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
         onChange={handleChange}
       ></input>
       <div className="scrollable mt-2">
-        <table className="table table-responsive table-hover">
+        <table className="ta">
           <thead>
             <tr>
               {employeeFields.map((field) => {
