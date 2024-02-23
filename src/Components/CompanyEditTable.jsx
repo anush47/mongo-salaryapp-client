@@ -1,4 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./tablestyle.css";
 import Header from "../Components/Header";
 import {
   TextInput,
