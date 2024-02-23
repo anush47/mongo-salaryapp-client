@@ -55,7 +55,7 @@ function CompaniesTable() {
         onChange={handleChange}
       ></input>
       <div className="scrollable mt-2">
-        <table className="table table-hover">
+        <table className="table table-responsive table-hover">
           <thead>
             <tr>
               <th>
