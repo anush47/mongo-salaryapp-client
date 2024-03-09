@@ -13,12 +13,17 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import EmployeesTable from "./EmployeesTable";
 import MonthlyEmployeeDetailsTable from "./MonthlyEmployeeDetailsTable";
-import MonthlyPaymentsTable from "./MonthlyPaymentDetailsTable";
+import MonthlyPaymentDetailsTable from "./MonthlyPaymentDetailsTable";
 
 function CompanyEditTable({ employer_no }) {
   const [company, setCompany] = useState([]);
   const [newDetails, setNewDetails] = useState([]);
   const [disabled, setDisabled] = useState(true); // State variable for disabled
+
+  const text_area_widths = {
+    default_epf_payment_method: "10rem",
+    default_etf_payment_method: "10rem",
+  };
 
   useEffect(() => {
     const fetchCompany = async (employer_no) => {
@@ -294,6 +299,10 @@ function CompanyEditTable({ employer_no }) {
                           handleChangeFunction={handleChange}
                           handleChangeElementFunction={handleChangeElement}
                           disabled={disabled} // Pass disabled prop
+                          //set width if it is in text_area_width
+                          width={
+                            text_area_widths[key] ? text_area_widths[key] : ""
+                          }
                         />
                       </td>
                     </tr>
@@ -388,7 +397,7 @@ function CompanyEditTable({ employer_no }) {
         <div id="monthly-payment-details-section" className="h3 mb-3">
           <b>Monthly Payment Details</b>
         </div>
-        <MonthlyPaymentsTable
+        <MonthlyPaymentDetailsTable
           company={newDetails}
           monthly_payments={newDetails.monthly_payments}
           handleChangeFunction={handleChange}

@@ -7,7 +7,7 @@ import {
   TextInput,
 } from "./InputComponents";
 
-function MonthlyPaymentsTable({
+function MonthlyPaymentDetailsTable({
   company,
   monthly_payments,
   handleChangeFunction,
@@ -18,6 +18,14 @@ function MonthlyPaymentsTable({
   const [monthlyPaymentFields, setMonthlyPaymentFields] = useState([]);
   const [period, setPeriod] = useState("");
   const [newPayment, setNewPayment] = useState({});
+
+  const text_area_widths = {
+    epf_reference_no: "6rem",
+    epf_payment_method: "6rem",
+    etf_payment_method: "6rem",
+    epf_cheque_no: "5rem",
+    etf_cheque_no: "6rem",
+  };
 
   const emptyNewMonthly = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
@@ -300,7 +308,14 @@ function MonthlyPaymentsTable({
 
                   default:
                     return (
-                      <th key={field}>
+                      <th
+                        key={field}
+                        style={{
+                          width: text_area_widths[field]
+                            ? text_area_widths[field]
+                            : "auto",
+                        }}
+                      >
                         <TableKey
                           key_name={field.toUpperCase().replace("_", " ")}
                         />
@@ -332,4 +347,4 @@ function MonthlyPaymentsTable({
   );
 }
 
-export default MonthlyPaymentsTable;
+export default MonthlyPaymentDetailsTable;

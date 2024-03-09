@@ -5,13 +5,13 @@ function TextInput({
   disabled = false,
 }) {
   return (
-    <input
-      className="form-control text-dark ms-2 me-2"
-      type="textarea"
+    <textarea
+      className="form-control text-dark"
       id={key_name}
       onChange={handleChangeFunction}
       defaultValue={value ? value : ""}
       disabled={disabled}
+      style={{ resize: "horizontal" }}
     />
   );
 }
@@ -30,7 +30,7 @@ const DropdownInput = ({
       defaultValue={value ? value : optionKeys[0]}
       onChange={handleChangeFunction}
       disabled={disabled}
-      className="form-select ms-2 me-2"
+      className="form-select m-1"
     >
       {optionVals.map((optionVal, i) => (
         <option
@@ -54,7 +54,7 @@ function CheckBoxInput({
 }) {
   return (
     <input
-      className="ms-2 me-2 form-check-input"
+      className="ms-1 form-check-input"
       type="checkbox"
       id={key_name}
       onChange={handleChangeFunction}
@@ -73,7 +73,7 @@ function DateInput({
 }) {
   return (
     <input
-      className="form-control ms-2 me-2"
+      className="form-control m-1"
       type="date"
       id={key_name}
       onChange={handleChangeFunction}
@@ -127,7 +127,7 @@ function PaymentMethodInput({
       <div className="input-group-append">
         <button
           name="setbutton-cash"
-          className="btn btn-outline-dark me-2"
+          className="btn btn-outline-dark m-1"
           type="button"
           onClick={(e) => setPaymentMethod("CASH")}
           disabled={disabled}
@@ -137,7 +137,7 @@ function PaymentMethodInput({
       </div>
       <div className="input-group-append">
         <button
-          className="btn btn-outline-dark"
+          className="btn btn-outline-dark m-1"
           type="button"
           onClick={(e) => setPaymentMethod("")}
           disabled={disabled}

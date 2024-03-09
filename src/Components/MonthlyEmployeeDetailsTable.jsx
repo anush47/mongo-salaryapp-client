@@ -20,6 +20,8 @@ function MonthlyEmployeeDetailsTable({
   const [newMonthly, setNewMonthly] = useState({});
   let monthlyDetailsAvailable = false;
 
+  const text_area_widths = { epf_no: "4rem", name: "7rem" };
+
   const emptyNewMonthly = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
       switch (key) {
@@ -195,7 +197,9 @@ function MonthlyEmployeeDetailsTable({
                 <DropdownInput
                   keyName={"monthly-epf_no-new"}
                   optionKeys={employees.map((employee, i) => employee.epf_no)}
-                  optionVals={employees.map((employee) => employee.name)}
+                  optionVals={employees.map(
+                    (employee) => employee.name + " - " + employee.epf_no
+                  )}
                   handleChangeFunction={handleChange}
                   disabled={disabled} // Pass disabled prop
                 />
@@ -324,12 +328,25 @@ function MonthlyEmployeeDetailsTable({
         <table className="table table-responsive table-hover">
           <thead>
             <tr>
-              <th>
+              <th
+                style={{
+                  width: text_area_widths["epf_no"]
+                    ? text_area_widths["epf_no"]
+                    : "auto",
+                }}
+              >
                 <TableKey key_name={"EPF NO"} />
               </th>
-              <th>
+              <th
+                style={{
+                  width: text_area_widths["name"]
+                    ? text_area_widths["name"]
+                    : "auto",
+                }}
+              >
                 <TableKey key_name={"NAME"} />
               </th>
+
               {employeeMonthlyDetailFields.map((field) => {
                 switch (field) {
                   case "_id":
@@ -338,7 +355,14 @@ function MonthlyEmployeeDetailsTable({
 
                   default:
                     return (
-                      <th key={field}>
+                      <th
+                        key={field}
+                        style={{
+                          width: text_area_widths[field]
+                            ? text_area_widths[field]
+                            : "auto",
+                        }}
+                      >
                         <TableKey
                           key_name={field.toUpperCase().replace("_", " ")}
                         />
