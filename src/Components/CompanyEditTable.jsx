@@ -20,9 +20,11 @@ function CompanyEditTable({ employer_no }) {
   const [newDetails, setNewDetails] = useState([]);
   const [disabled, setDisabled] = useState(true); // State variable for disabled
 
-  const text_area_widths = {
-    default_epf_payment_method: "10rem",
-    default_etf_payment_method: "10rem",
+  const text_area_heights = {
+    name: "1rem",
+    employer_no: "1rem",
+    default_epf_payment_method: "1rem",
+    default_etf_payment_method: "1rem",
   };
 
   useEffect(() => {
@@ -231,45 +233,45 @@ function CompanyEditTable({ employer_no }) {
       <Header title={company ? company.name : "Company Details"} />
       <div className="text-start">
         <Link to={"/companies"}>
-          <button className="btn btn-outline-dark me-2">Back</button>
+          <button className="btn btn-outline-dark m-1">Back</button>
         </Link>
         <button
           id="company-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark me-2"
+          className="btn btn-outline-dark m-1"
         >
           Company
         </button>
         <button
           id="employees-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark me-2"
+          className="btn btn-outline-dark m-1"
         >
           Employees
         </button>
         <button
           id="monthly-employee-details-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark me-2"
+          className="btn btn-outline-dark m-1"
         >
           Monthly Employee Details
         </button>
         <button
           id="monthly-payment-details-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark me-2"
+          className="btn btn-outline-dark m-1"
         >
           Monthly Payment Details
         </button>
         <button
           id="edit-btn"
           onClick={handleClick}
-          className="btn btn-primary me-2"
+          className="btn btn-primary m-1"
         >
           Edit
         </button>
       </div>
-      <div className="scrollable mt-2">
+      <div className="scrollable m-2">
         <div id="company-section" className="h3 mb-3">
           <b>Company Details</b>
         </div>
@@ -299,10 +301,7 @@ function CompanyEditTable({ employer_no }) {
                           handleChangeFunction={handleChange}
                           handleChangeElementFunction={handleChangeElement}
                           disabled={disabled} // Pass disabled prop
-                          //set width if it is in text_area_width
-                          width={
-                            text_area_widths[key] ? text_area_widths[key] : ""
-                          }
+                          height={text_area_heights[key]}
                         />
                       </td>
                     </tr>
@@ -322,12 +321,14 @@ function CompanyEditTable({ employer_no }) {
                         />
                       </td>
                       <td>
-                        <CheckBoxInput
-                          key_name={key}
-                          value={value}
-                          handleChangeFunction={handleChange}
-                          disabled={disabled} // Pass disabled prop
-                        />
+                        <div className="form-check form-switch">
+                          <CheckBoxInput
+                            key_name={key}
+                            value={value}
+                            handleChangeFunction={handleChange}
+                            disabled={disabled} // Pass disabled prop
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -367,6 +368,8 @@ function CompanyEditTable({ employer_no }) {
                           value={value}
                           handleChangeFunction={handleChange}
                           disabled={disabled} // Pass disabled prop
+                          resizable={"block"}
+                          height={text_area_heights[key]}
                         />
                       </td>
                     </tr>

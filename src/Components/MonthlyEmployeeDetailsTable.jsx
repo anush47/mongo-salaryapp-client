@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   DropdownInput,
+  MinWidthSetTextArea,
   MonthInput,
   TableKey,
   TextInput,
@@ -20,7 +21,7 @@ function MonthlyEmployeeDetailsTable({
   const [newMonthly, setNewMonthly] = useState({});
   let monthlyDetailsAvailable = false;
 
-  const text_area_widths = { epf_no: "4rem", name: "7rem" };
+  const text_area_widths = { epf_no: "3rem", name: "10rem" };
 
   const emptyNewMonthly = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
@@ -228,6 +229,7 @@ function MonthlyEmployeeDetailsTable({
                         value={""}
                         handleChangeFunction={handleChange}
                         disabled={disabled} // Pass disabled prop
+                        width={text_area_widths[field]}
                       />
                     </td>
                   );
@@ -285,6 +287,7 @@ function MonthlyEmployeeDetailsTable({
                           value={monthlyDetail ? monthlyDetail[field] : ""}
                           handleChangeFunction={handleChangeFunction}
                           disabled={disabled} // Pass disabled prop
+                          width={text_area_widths[field]}
                         />
                       </td>
                     );
@@ -328,23 +331,13 @@ function MonthlyEmployeeDetailsTable({
         <table className="table table-responsive table-hover">
           <thead>
             <tr>
-              <th
-                style={{
-                  width: text_area_widths["epf_no"]
-                    ? text_area_widths["epf_no"]
-                    : "auto",
-                }}
-              >
+              <th>
                 <TableKey key_name={"EPF NO"} />
+                <MinWidthSetTextArea width={text_area_widths["epf_no"]} />
               </th>
-              <th
-                style={{
-                  width: text_area_widths["name"]
-                    ? text_area_widths["name"]
-                    : "auto",
-                }}
-              >
+              <th>
                 <TableKey key_name={"NAME"} />
+                <MinWidthSetTextArea width={text_area_widths["name"]} />
               </th>
 
               {employeeMonthlyDetailFields.map((field) => {
@@ -355,17 +348,11 @@ function MonthlyEmployeeDetailsTable({
 
                   default:
                     return (
-                      <th
-                        key={field}
-                        style={{
-                          width: text_area_widths[field]
-                            ? text_area_widths[field]
-                            : "auto",
-                        }}
-                      >
+                      <th key={field}>
                         <TableKey
                           key_name={field.toUpperCase().replace("_", " ")}
                         />
+                        <MinWidthSetTextArea width={text_area_widths[field]} />
                       </th>
                     );
                 }

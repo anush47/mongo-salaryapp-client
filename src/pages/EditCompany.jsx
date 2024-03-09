@@ -1,4 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import ".//styles.css";
 import { Link, useParams } from "react-router-dom";
 import CompanyEditTable from "../Components/CompanyEditTable";
 

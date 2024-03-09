@@ -1,9 +1,15 @@
+const default_text_width = "100%";
+
 function TextInput({
   key_name,
   value,
   handleChangeFunction,
   disabled = false,
+  resizable = "both",
+  width,
+  height,
 }) {
+  const default_text_height = "1rem auto";
   return (
     <textarea
       className="form-control text-dark"
@@ -11,7 +17,25 @@ function TextInput({
       onChange={handleChangeFunction}
       defaultValue={value ? value : ""}
       disabled={disabled}
-      style={{ resize: "horizontal" }}
+      style={{
+        height: height ? height : default_text_height,
+        resize: resizable,
+        width: width ? width : default_text_width,
+      }}
+    />
+  );
+}
+
+function MinWidthSetTextArea({ width }) {
+  return (
+    <textarea
+      style={{
+        display: "flex",
+        resize: "none",
+        height: "0rem",
+        width: width ? width : default_text_width,
+        opacity: 0,
+      }}
     />
   );
 }
@@ -23,7 +47,9 @@ const DropdownInput = ({
   optionVals,
   handleChangeFunction,
   disabled,
+  width,
 }) => {
+  const default_dropdow_width = "100%";
   return (
     <select
       id={keyName}
@@ -31,6 +57,9 @@ const DropdownInput = ({
       onChange={handleChangeFunction}
       disabled={disabled}
       className="form-select m-1"
+      style={{
+        width: width ? width : default_dropdow_width,
+      }}
     >
       {optionVals.map((optionVal, i) => (
         <option
@@ -54,7 +83,7 @@ function CheckBoxInput({
 }) {
   return (
     <input
-      className="ms-1 form-check-input"
+      className="form-check-input"
       type="checkbox"
       id={key_name}
       onChange={handleChangeFunction}
@@ -110,6 +139,7 @@ function PaymentMethodInput({
   handleChangeFunction,
   handleChangeElementFunction,
   disabled = false,
+  height,
 }) {
   const setPaymentMethod = (str) => {
     const e = document.getElementById(key_name);
@@ -123,6 +153,9 @@ function PaymentMethodInput({
         value={value}
         handleChangeFunction={handleChangeFunction}
         disabled={disabled}
+        resizable={"block"}
+        width={"10rem"}
+        height={height}
       />
       <div className="input-group-append">
         <button
@@ -181,4 +214,5 @@ export {
   MonthInput,
   PaymentMethodInput,
   DropdownInput,
+  MinWidthSetTextArea,
 };

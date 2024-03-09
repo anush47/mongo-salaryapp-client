@@ -3,6 +3,7 @@ import axios from "axios";
 import {
   CheckBoxInput,
   DropdownInput,
+  MinWidthSetTextArea,
   TableKey,
   TextInput,
 } from "./InputComponents";
@@ -13,6 +14,13 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
   const [employeeFields, setEmployeeFields] = useState([]);
   const [_employees, setEmployees] = useState([]);
   const [newEmployee, setNewEmployee] = useState({});
+
+  const text_area_widths = {
+    epf_no: "4rem",
+    name: "10rem",
+    nic: "9rem",
+    divide_by: "5rem",
+  };
 
   const emptyNewEmployee = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
@@ -168,12 +176,14 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
               case "active":
                 return (
                   <td key={field + "new"}>
-                    <CheckBoxInput
-                      key_name={"employee-" + field + "-new"}
-                      value={true} // Value is true
-                      handleChangeFunction={handleChange}
-                      disabled={disabled}
-                    />
+                    <div className="form-check form-switch">
+                      <CheckBoxInput
+                        key_name={"employee-" + field + "-new"}
+                        value={true} // Value is true
+                        handleChangeFunction={handleChange}
+                        disabled={disabled}
+                      />
+                    </div>
                   </td>
                 );
               case "divide_by":
@@ -187,6 +197,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                       optionVals={options}
                       handleChangeFunction={handleChange}
                       disabled={disabled}
+                      width={text_area_widths[field]}
                     />
                   </td>
                 );
@@ -198,6 +209,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                       value="" // Empty value for other fields
                       handleChangeFunction={handleChange}
                       disabled={disabled}
+                      width={text_area_widths[field]}
                     />
                   </td>
                 );
@@ -226,12 +238,14 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
               case "active":
                 return (
                   <td key={field + employee.epf_no} className="text-left">
-                    <CheckBoxInput
-                      key_name={"employee-" + field + "-" + employee.epf_no}
-                      value={employee.active}
-                      handleChangeFunction={handleChangeFunction}
-                      disabled={disabled}
-                    />
+                    <div className="form-check form-switch">
+                      <CheckBoxInput
+                        key_name={"employee-" + field + "-" + employee.epf_no}
+                        value={employee.active}
+                        handleChangeFunction={handleChangeFunction}
+                        disabled={disabled}
+                      />
+                    </div>
                   </td>
                 );
               case "divide_by":
@@ -245,6 +259,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                       optionVals={options}
                       handleChangeFunction={handleChangeFunction}
                       disabled={disabled}
+                      width={text_area_widths[field]}
                     />
                   </td>
                 );
@@ -257,6 +272,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                       value={employee[field] || ""} // Use empty string if value is falsy
                       handleChangeFunction={handleChangeFunction}
                       disabled={disabled}
+                      width={text_area_widths[field]}
                     />
                   </td>
                 );
@@ -302,6 +318,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                         <TableKey
                           key_name={field.toUpperCase().replace("_", " ")}
                         />
+                        <MinWidthSetTextArea width={text_area_widths[field]} />
                       </th>
                     );
                 }

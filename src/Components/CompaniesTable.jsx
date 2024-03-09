@@ -128,11 +128,13 @@ function CompaniesTable() {
                     <td className="text-left">{company.name}</td>
                     <td className="text-left">{company.employer_no}</td>
                     <td className="text-left">
-                      <CheckBoxInput
-                        key_name={company.employer_no + "_active"}
-                        value={company.active}
-                        readOnly={true}
-                      />
+                      <div className="form-check form-switch">
+                        <CheckBoxInput
+                          key_name={company.employer_no + "_active"}
+                          value={company.active}
+                          readOnly={true}
+                        />
+                      </div>
                     </td>
                     <td className="text-left">
                       {company.activeEmployeesCount}
