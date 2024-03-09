@@ -1,8 +1,11 @@
-import "bootstrap/dist/css/bootstrap.min.css";
-import "./tablestyle.css";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { CheckBoxInput, TableKey, TextInput } from "./InputComponents";
+import {
+  CheckBoxInput,
+  DropdownInput,
+  TableKey,
+  TextInput,
+} from "./InputComponents";
 
 function EmployeesTable({ employees, handleChangeFunction, disabled }) {
   const [search, setSearch] = useState();
@@ -11,36 +14,63 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
   const [_employees, setEmployees] = useState([]);
   const [newEmployee, setNewEmployee] = useState({});
 
+  const emptyNewEmployee = (fields) => {
+    const result_obj = fields.reduce((obj, key) => {
+      switch (key) {
+        case "_id":
+          break;
+        case "active":
+          obj[key] = true;
+          break;
+        case "divide_by":
+          obj[key] = 240;
+
+        default:
+          obj[key] = null;
+          break;
+      }
+      return obj;
+    }, {});
+    return result_obj;
+  };
+
   useEffect(() => {
     const fetchFields = async (schema) => {
       try {
         setEmployees(employees);
-        const resFields = await axios.get("http://localhost:3001/fields", {
-          params: { schema: schema },
-        });
-        setEmployeeFields(resFields.data);
-        const result_obj = resFields.data.reduce((obj, key) => {
-          switch (key) {
-            case "_id":
-              break;
-            case "active":
-              obj[key] = true;
-              break;
-
-            default:
-              obj[key] = null;
-              break;
+        const resFields = await axios.get(
+          process.env.REACT_APP_SERVER_URL + "/fields",
+          {
+            params: { schema: schema },
           }
-          return obj;
-        }, {});
-        setNewEmployee(result_obj);
+        );
+        setEmployeeFields(resFields.data);
+        const emptyNew = emptyNewEmployee(resFields.data);
+        setNewEmployee(emptyNew);
       } catch (error) {
         console.log(error);
       }
     };
 
     fetchFields("employee");
-  }, [employees]);
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    if (employees) {
+      setEmployeesCountText();
+    }
+  }, [employees, _employees]);
+
+  const setEmployeesCountText = () => {
+    const activeEmployeesCount = employees.filter(
+      (employee) => employee.active
+    ).length;
+    const totalEmployeesCount = employees.length;
+    const employeesLabel = `Active Employees: ${activeEmployeesCount} out of ${totalEmployeesCount}`;
+
+    document.getElementById("employees-label").innerText = employeesLabel;
+  };
 
   useEffect(() => {
     if (employees) {
@@ -58,20 +88,9 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
   }, [search, employees, _employees]);
 
   const newDataValidation = () => {
-    for (let key in newEmployee) {
-      switch (key) {
-        case "gross_salary":
-        case "total_salary":
-          break;
-
-        default:
-          if (newEmployee[key] === "") {
-            alert(`${key} cannot be blank.`);
-            console.log(key);
-            return false;
-          }
-          break;
-      }
+    if (!newEmployee["epf_no"]) {
+      alert("EPF number cannot be blank");
+      return false;
     }
     return true;
   };
@@ -83,23 +102,25 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
         if (newDataValidation()) {
           employees.push(newEmployee);
           setEmployees(...employees);
+          const emptyNew = emptyNewEmployee(employeeFields);
+          setNewEmployee(emptyNew);
         }
-        console.log(_employees);
         break;
       default:
         if (e.target.id.startsWith("employee-del-btn-")) {
           const match = e.target.id.match(/^employee-del-btn-(.+)$/);
           const epf_no = match[1];
-          const index = employees.findIndex(
-            (item) => item["epf_no"] === epf_no
-          );
+          // eslint-disable-next-line
+          const index = employees.findIndex((item) => item["epf_no"] == epf_no);
           if (index !== -1) {
-            employees.splice(index, 1); // Remove 1 element starting from indexToRemove
-            setEmployees([...employees]);
+            const confirmEmployeeDelete = window.confirm(
+              `${employees[index].epf_no} - ${employees[index].name} will be deleted. Are you sure ?`
+            );
+            if (confirmEmployeeDelete) {
+              employees.splice(index, 1); // Remove 1 element starting from indexToRemove
+              setEmployees([...employees]);
+            }
           }
-          alert(index);
-          console.log(epf_no);
-          console.log(employees);
         }
     }
   };
@@ -134,6 +155,9 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
   const EmployeeRow = ({ employee }) => {
     // Check if employee is not provided
     if (!employee) {
+      if (disabled) {
+        return null;
+      }
       return (
         <tr>
           {employeeFields.map((field) => {
@@ -152,7 +176,20 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                     />
                   </td>
                 );
-
+              case "divide_by":
+                let options = [240, 200];
+                return (
+                  <td key={field + "new"} className="text-left">
+                    <DropdownInput
+                      keyName={"employee-" + field + "-new"}
+                      value={options[0]}
+                      optionKeys={options}
+                      optionVals={options}
+                      handleChangeFunction={handleChange}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
               default:
                 return (
                   <td key={field + "new"}>
@@ -178,52 +215,66 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
           </td>
         </tr>
       );
+    } else {
+      return (
+        <tr>
+          {employeeFields.map((field) => {
+            switch (field) {
+              case "_id":
+              case "monthly_details":
+                return null;
+              case "active":
+                return (
+                  <td key={field + employee.epf_no} className="text-left">
+                    <CheckBoxInput
+                      key_name={"employee-" + field + "-" + employee.epf_no}
+                      value={employee.active}
+                      handleChangeFunction={handleChangeFunction}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+              case "divide_by":
+                let options = [240, 200];
+                return (
+                  <td key={field + employee.epf_no} className="text-left">
+                    <DropdownInput
+                      keyName={"employee-" + field + "-" + employee.epf_no}
+                      value={employee.divide_by}
+                      optionKeys={options}
+                      optionVals={options}
+                      handleChangeFunction={handleChangeFunction}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+
+              default:
+                return (
+                  <td key={field + employee._id} className="text-left">
+                    <TextInput
+                      key_name={"employee-" + field + "-" + employee.epf_no}
+                      value={employee[field] || ""} // Use empty string if value is falsy
+                      handleChangeFunction={handleChangeFunction}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+            }
+          })}
+          <td className="txt-center">
+            <button
+              className="btn btn-outline-danger"
+              id={"employee-del-btn-" + employee.epf_no}
+              onClick={handleClick}
+              disabled={disabled}
+            >
+              Delete
+            </button>
+          </td>
+        </tr>
+      );
     }
-
-    return (
-      <tr>
-        {employeeFields.map((field) => {
-          switch (field) {
-            case "_id":
-            case "monthly_details":
-              return null;
-            case "active":
-              return (
-                <td key={field + employee._id} className="text-left">
-                  <CheckBoxInput
-                    key_name={"employee-" + field + "-" + employee._id}
-                    value={employee.active}
-                    handleChangeFunction={handleChangeFunction}
-                    disabled={disabled}
-                  />
-                </td>
-              );
-
-            default:
-              return (
-                <td key={field + employee._id} className="text-left">
-                  <TextInput
-                    key_name={"employee-" + field + "-" + employee._id}
-                    value={employee[field] || ""} // Use empty string if value is falsy
-                    handleChangeFunction={handleChangeFunction}
-                    disabled={disabled}
-                  />
-                </td>
-              );
-          }
-        })}
-        <td className="txt-center">
-          <button
-            className="btn btn-outline-danger"
-            id={"employee-del-btn-" + employee.epf_no}
-            onClick={handleClick}
-            disabled={disabled}
-          >
-            Delete
-          </button>
-        </td>
-      </tr>
-    );
   };
 
   return (
@@ -236,7 +287,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
         onChange={handleChange}
       ></input>
       <div className="scrollable mt-2">
-        <table className="ta">
+        <table className="table table-responsive table-hover">
           <thead>
             <tr>
               {employeeFields.map((field) => {
@@ -258,9 +309,19 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
             </tr>
           </thead>
           <tbody>
-            {filteredEmployees.map((employee) => {
-              return <EmployeeRow key={employee.epf_no} employee={employee} />;
-            })}
+            {filteredEmployees.length > 0 ? (
+              filteredEmployees.map((employee) => {
+                return (
+                  <EmployeeRow key={employee.epf_no} employee={employee} />
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="5" className="text-center">
+                  No employees found.
+                </td>
+              </tr>
+            )}
             <EmployeeRow />
           </tbody>
         </table>

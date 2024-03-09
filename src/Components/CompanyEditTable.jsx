@@ -1,5 +1,4 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./tablestyle.css";
 import Header from "../Components/Header";
 import {
   TextInput,
@@ -14,7 +13,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import EmployeesTable from "./EmployeesTable";
 import MonthlyEmployeeDetailsTable from "./MonthlyEmployeeDetailsTable";
-import MonthlyPaymentDetailsTable from "./MonthlyPaymentDetailsTable";
+import MonthlyPaymentsTable from "./MonthlyPaymentDetailsTable";
 
 function CompanyEditTable({ employer_no }) {
   const [company, setCompany] = useState([]);
@@ -28,9 +27,23 @@ function CompanyEditTable({ employer_no }) {
           process.env.REACT_APP_SERVER_URL + "/get-company",
           { params: { employer_no: employer_no } }
         );
-        setCompany(resCompany.data);
-        setNewDetails(Object.assign({}, resCompany.data));
-        //console.log(resCompany.data);
+        const companyData = resCompany.data;
+
+        // Ensure employees, employees.monthly_details, and monthly_payments are defined
+        if (!companyData.employees) {
+          companyData.employees = [];
+        }
+        companyData.employees.forEach((employee) => {
+          if (!employee.monthly_details) {
+            employee.monthly_details = [];
+          }
+        });
+        if (!companyData.monthly_payments) {
+          companyData.monthly_payments = [];
+        }
+
+        setCompany(companyData);
+        setNewDetails(Object.assign({}, companyData));
       } catch (error) {
         console.log(error);
       }
@@ -61,37 +74,45 @@ function CompanyEditTable({ employer_no }) {
       const match = e.id.match(/^employee-(.+)-(.+)$/);
       if (match) {
         const field_name = match[1]; // Extracted field_name
-        const _id = match[2]; // Extracted _id
-        if (_id === "new") {
-          alert("new");
-        } else {
-          const index = newDetails.employees.findIndex(
-            (item) => item["_id"] === _id
-          );
-          newDetails.employees[index][field_name] = value;
-        }
+        const epf_no = match[2]; // Extracted _id
+        const index = newDetails.employees.findIndex(
+          // eslint-disable-next-line
+          (item) => item["epf_no"] == epf_no
+        );
+        newDetails.employees[index][field_name] = value;
       }
     } else if (e.id.startsWith("monthly")) {
       // Extract field_name and _id using regex
       const match = e.id.match(/^monthly-(.+)-(.+)-(.+)$/);
       if (match) {
         const field_name = match[1]; // Extracted field_name
-        const _id = match[2]; // Extracted _id
+        const epf_no = match[2]; // Extracted _id
         const monthly_id = match[3];
-        if (_id === "new") {
-          alert("new");
-        } else {
-          const employee_index = newDetails.employees.findIndex(
-            (item) => item["_id"] === _id
-          );
-          const monthly_index = newDetails.employees[employee_index][
-            "monthly_details"
-          ].findIndex((item) => item["_id"] === monthly_id);
-          newDetails.employees[employee_index]["monthly_details"][
-            monthly_index
-          ][field_name] = value;
-          console.log(field_name, value);
-        }
+
+        const index_employee = newDetails.employees.findIndex(
+          // eslint-disable-next-line
+          (item) => item["epf_no"] == epf_no
+        );
+
+        const index_monthly = newDetails.employees[index_employee][
+          "monthly_details"
+        ].findIndex((item) => item["_id"] === monthly_id);
+
+        newDetails.employees[index_employee]["monthly_details"][index_monthly][
+          field_name
+        ] = value;
+        console.log(field_name, value);
+      }
+    } else if (e.id.startsWith("payment")) {
+      // Extract field_name and _id using regex
+      const match = e.id.match(/^payment-(.+)-(.+)$/);
+      if (match) {
+        const field_name = match[1]; // Extracted field_name
+        const _id = match[2]; // Extracted _id
+        const index = newDetails.monthly_payments.findIndex(
+          (item) => item["_id"] === _id
+        );
+        newDetails.monthly_payments[index][field_name] = value;
       }
     } else {
       newDetails[e.id] = value;
@@ -100,7 +121,7 @@ function CompanyEditTable({ employer_no }) {
     if (reset_btn) {
       reset_btn.className = "btn btn-outline-danger ms-3 text-end";
     }
-    //console.log(newDetails);
+    //console.log(value);
   };
 
   const dataValidation = () => {
@@ -121,6 +142,7 @@ function CompanyEditTable({ employer_no }) {
         );
         alert(updateCompanyResponse.data.message);
         console.log(updateCompanyResponse.data);
+        window.location.reload(false);
         return true;
         //navigate("/companies");
       } catch (error) {
@@ -246,13 +268,14 @@ function CompanyEditTable({ employer_no }) {
         <div id="company-section" className="h3 mb-3">
           <b>Company Details</b>
         </div>
-        <table className="table table-responsive">
+        <table className="table table-hover table-responsive">
           <tbody>
             {Object.entries(newDetails).map(([key, value]) => {
               switch (key) {
                 case "_id":
                 case "__v":
                 case "employees":
+                case "monthly_payments":
                   return null;
                 case "default_epf_payment_method":
                 case "default_etf_payment_method":
@@ -280,6 +303,7 @@ function CompanyEditTable({ employer_no }) {
                 case "etf_required":
                 case "salary_sheets_required":
                 case "pay_slips_required":
+                  //bools
                   return (
                     <tr key={key}>
                       <td>
@@ -300,6 +324,7 @@ function CompanyEditTable({ employer_no }) {
                   );
                 case "start_day":
                 case "start_day_by_me":
+                  //days
                   return (
                     <tr key={key}>
                       <td>
@@ -343,10 +368,7 @@ function CompanyEditTable({ employer_no }) {
         </table>
         <hr className="my-5" />
         <div id="employees-section" className="h3 mb-3">
-          <b>
-            {"Employees - " +
-              (company && company.employees ? company.employees.length : "0")}
-          </b>
+          <b id="employees-label">Employees</b>
         </div>
         <EmployeesTable
           employees={newDetails.employees}
@@ -366,11 +388,12 @@ function CompanyEditTable({ employer_no }) {
         <div id="monthly-payment-details-section" className="h3 mb-3">
           <b>Monthly Payment Details</b>
         </div>
-        {/* <MonthlyPaymentDetailsTable
-          employees={newDetails.employees}
+        <MonthlyPaymentsTable
+          company={newDetails}
+          monthly_payments={newDetails.monthly_payments}
           handleChangeFunction={handleChange}
           disabled={disabled}
-        /> */}
+        />
       </div>
     </div>
   );

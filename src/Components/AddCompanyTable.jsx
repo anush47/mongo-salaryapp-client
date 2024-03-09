@@ -12,17 +12,18 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 function AddCompanyTable() {
-  const [companyFields, setCompanyFields] = useState([]);
   const [newDetails, setNewDetails] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchFields = async (schema) => {
       try {
-        const resFields = await axios.get("http://localhost:3001/fields", {
-          params: { schema: schema },
-        });
-        setCompanyFields(resFields.data);
+        const resFields = await axios.get(
+          process.env.REACT_APP_SERVER_URL + "/fields",
+          {
+            params: { schema: schema },
+          }
+        );
         const resultObject = resFields.data.reduce((obj, key) => {
           switch (key) {
             case "active_status":
@@ -36,12 +37,18 @@ function AddCompanyTable() {
             case "_id":
               break;
 
+            case "employees":
+            case "monthly_payments":
+              obj[key] = [];
+              break;
+
             default:
               obj[key] = null;
               break;
           }
           return obj;
         }, {});
+
         setNewDetails(resultObject);
       } catch (error) {
         console.log(error);
@@ -85,7 +92,7 @@ function AddCompanyTable() {
     if (dataValidation()) {
       try {
         const addCompanyResponse = await axios.post(
-          "http://localhost:3001/add-company",
+          process.env.REACT_APP_SERVER_URL + "/add-company",
           newDetails
         );
         alert(addCompanyResponse.data.message);
@@ -142,6 +149,9 @@ function AddCompanyTable() {
         </button>
       </div>
       <div className="scrollable mt-2">
+        <div id="company-section" className="h3 mb-3">
+          <b>Company Details</b>
+        </div>
         <table className="table table-responsive">
           <tbody>
             {Object.entries(newDetails).map(([key, value]) => {
@@ -149,14 +159,15 @@ function AddCompanyTable() {
                 case "_id":
                 case "__v":
                 case "employees":
+                case "monthly_payments":
                   break;
                 case "default_epf_payment_method":
                 case "default_etf_payment_method":
                   return (
                     <tr key={key}>
-                      <td>
+                      <th>
                         <TableKey key_name={key} />
-                      </td>
+                      </th>
                       <td>
                         <PaymentMethodInput
                           key_name={key}
@@ -167,16 +178,16 @@ function AddCompanyTable() {
                       </td>
                     </tr>
                   );
-                case "active_status":
+                case "active":
                 case "epf_required":
                 case "etf_required":
                 case "salary_sheets_required":
                 case "pay_slips_required":
                   return (
                     <tr key={key}>
-                      <td>
+                      <th>
                         <TableKey key_name={key} />
-                      </td>
+                      </th>
                       <td>
                         <CheckBoxInput
                           key_name={key}
@@ -190,9 +201,9 @@ function AddCompanyTable() {
                 case "start_day_by_me":
                   return (
                     <tr key={key}>
-                      <td>
+                      <th>
                         <TableKey key_name={key} />
-                      </td>
+                      </th>
                       <td>
                         <DateInput
                           key_name={key}
@@ -205,9 +216,9 @@ function AddCompanyTable() {
                 default:
                   return (
                     <tr key={key}>
-                      <td>
+                      <th>
                         <TableKey key_name={key} />
-                      </td>
+                      </th>
                       <td>
                         <TextInput
                           key_name={key}

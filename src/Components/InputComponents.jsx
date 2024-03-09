@@ -10,11 +10,40 @@ function TextInput({
       type="textarea"
       id={key_name}
       onChange={handleChangeFunction}
-      defaultValue={value}
+      defaultValue={value ? value : ""}
       disabled={disabled}
     />
   );
 }
+
+const DropdownInput = ({
+  keyName,
+  value,
+  optionKeys,
+  optionVals,
+  handleChangeFunction,
+  disabled,
+}) => {
+  return (
+    <select
+      id={keyName}
+      defaultValue={value ? value : optionKeys[0]}
+      onChange={handleChangeFunction}
+      disabled={disabled}
+      className="form-select ms-2 me-2"
+    >
+      {optionVals.map((optionVal, i) => (
+        <option
+          className="dropdown-item"
+          key={optionKeys[i]}
+          value={optionKeys[i]}
+        >
+          {optionVal}
+        </option>
+      ))}
+    </select>
+  );
+};
 
 function CheckBoxInput({
   key_name,
@@ -31,6 +60,7 @@ function CheckBoxInput({
       onChange={handleChangeFunction}
       defaultChecked={value != null ? value : true}
       disabled={readOnly || disabled}
+      style={{}}
     />
   );
 }
@@ -68,7 +98,7 @@ function MonthInput({
       id={key_name}
       onChange={handleChangeFunction}
       defaultValue={defaultValue}
-      style={{ width: "150px" }}
+      style={{ width: "165px" }}
       disabled={disabled}
     />
   );
@@ -150,4 +180,5 @@ export {
   DateInput,
   MonthInput,
   PaymentMethodInput,
+  DropdownInput,
 };

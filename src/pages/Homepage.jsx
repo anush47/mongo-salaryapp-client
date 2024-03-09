@@ -8,9 +8,9 @@ const Homepage = () => {
     <div>
       <div className="container">
         <div className="mt-3">
-          <Header title={"Salary App"} />
+          <Header title={"SALARY APP"} />
           <Link to="/companies">
-            <button className="btn btn-primary m-2">Companies</button>
+            <button className="btn btn-outline-dark m-2">Companies</button>
           </Link>
         </div>
       </div>

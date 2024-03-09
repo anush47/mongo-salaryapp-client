@@ -45,6 +45,51 @@ function CompaniesTable() {
     }
   };
 
+  const handleClick = async (e) => {
+    if (e.target.id.startsWith("delete-company-btn-")) {
+      const idArray = e.target.id.split("-");
+      // Get the employer number from the id
+      const employerNo = idArray[3];
+
+      // Find the company with matching employer number
+      const companyToDelete = companies.find(
+        (company) => company.employer_no == employerNo
+      );
+
+      if (companyToDelete) {
+        // Confirm deletion with user
+        const confirmDelete = window.confirm(
+          `Are you sure you want to delete ${companyToDelete.name}?`
+        );
+
+        // If user confirms deletion, proceed with deletion
+        if (confirmDelete) {
+          try {
+            // Call the deleteCompany function with the employer number
+            await deleteCompany(employerNo);
+          } catch (error) {
+            alert(`An error occurred while deleting the company: \n${error}`);
+          }
+        }
+      } else {
+        alert("Company not found.");
+      }
+    }
+  };
+
+  const deleteCompany = async (employer_no) => {
+    try {
+      const resDel = await axios.post(
+        process.env.REACT_APP_SERVER_URL + "/delete-company",
+        { params: { employer_no: employer_no } }
+      );
+      console.log(resDel.data, employer_no);
+      setCompanies(companies.filter((c) => c.employer_no !== employer_no));
+    } catch (err) {
+      alert(`An error occurred while deleting the company: \n${err}`);
+    }
+  };
+
   return (
     <div>
       <input
@@ -68,33 +113,54 @@ function CompaniesTable() {
                 <TableKey key_name={"Active"} />
               </th>
               <th>
-                <TableKey key_name={"Employees"} />
+                <TableKey key_name={"Active Employees"} />
               </th>
               <th>
-                <TableKey key_name={"Edit"} />
+                <TableKey key_name={"Manage"} />
               </th>
             </tr>
           </thead>
           <tbody>
-            {filteredCompanies.map((company) => {
-              return (
-                <tr key={company.employer_no}>
-                  <td className="text-left">{company.name}</td>
-                  <td className="text-left">{company.employer_no}</td>
-                  <td className="text-left">
-                    <CheckBoxInput value={company.active} readOnly={true} />
-                  </td>
-                  <td className="text-left">{company.employeeCount}</td>
-                  <td>
-                    <Link to={"./" + company.employer_no.replace("/", "-")}>
-                      <button className="btn btn-outline-primary text-left">
-                        EDIT
+            {filteredCompanies ? (
+              filteredCompanies.map((company) => {
+                return (
+                  <tr key={company.employer_no}>
+                    <td className="text-left">{company.name}</td>
+                    <td className="text-left">{company.employer_no}</td>
+                    <td className="text-left">
+                      <CheckBoxInput
+                        key_name={company.employer_no + "_active"}
+                        value={company.active}
+                        readOnly={true}
+                      />
+                    </td>
+                    <td className="text-left">
+                      {company.activeEmployeesCount}
+                    </td>
+                    <td>
+                      <Link to={"./" + company.employer_no.replace("/", "-")}>
+                        <button className="btn btn-outline-primary text-left m-1">
+                          View
+                        </button>
+                      </Link>
+                      <button
+                        className="btn btn-outline-danger text-left m-1"
+                        id={"delete-company-btn-" + company.employer_no}
+                        onClick={handleClick}
+                      >
+                        Delete
                       </button>
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="5" className="text-center">
+                  No companies found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

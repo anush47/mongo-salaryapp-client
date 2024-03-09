@@ -1,138 +1,128 @@
-import "bootstrap/dist/css/bootstrap.min.css";
-import "./tablestyle.css";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
-  CheckBoxInput,
+  DropdownInput,
   MonthInput,
   TableKey,
   TextInput,
 } from "./InputComponents";
 
-function MonthlyPaymentDetailsTable({
-  employees,
+function MonthlyPaymentsTable({
+  company,
+  monthly_payments,
   handleChangeFunction,
   disabled,
 }) {
-  const [search, setSearch] = useState();
-  const [filteredEmployees, setFilteredEmployees] = useState([]);
-  const [employeeMonthlyDetailFields, setEmployeeMonthlyDetailFields] =
-    useState([]);
-  const [period, setPeriod] = useState();
-  const [_employees, setEmployees] = useState([]);
-  const [newEmployee, setNewEmployee] = useState({});
+  const [search, setSearch] = useState("");
+  const [filteredPayments, setFilteredPayments] = useState([]);
+  const [monthlyPaymentFields, setMonthlyPaymentFields] = useState([]);
+  const [period, setPeriod] = useState("");
+  const [newPayment, setNewPayment] = useState({});
 
+  const emptyNewMonthly = (fields) => {
+    const result_obj = fields.reduce((obj, key) => {
+      switch (key) {
+        case "_id":
+        case "__v":
+          break;
+        default:
+          obj[key] = null;
+          break;
+      }
+      return obj;
+    }, {});
+    return result_obj;
+  };
   useEffect(() => {
     const fetchFields = async (schema) => {
       try {
-        setEmployees(employees);
-        const resFields = await axios.get("http://localhost:3001/fields", {
-          params: { schema: schema },
-        });
-        setEmployeeMonthlyDetailFields(resFields.data);
-        const result_obj = resFields.data.reduce((obj, key) => {
-          switch (key) {
-            case "_id":
-              break;
-            // case "active":
-            //   obj[key] = true;
-            //   break;
-
-            default:
-              obj[key] = null;
-              break;
+        const resFields = await axios.get(
+          process.env.REACT_APP_SERVER_URL + "/fields",
+          {
+            params: { schema: schema },
           }
-          return obj;
-        }, {});
-        setPeriod(); //initial period
-        setNewEmployee(result_obj);
+        );
+        setMonthlyPaymentFields(resFields.data);
+        const emptyNew = emptyNewMonthly(resFields.data);
+        setNewPayment(emptyNew);
       } catch (error) {
         console.log(error);
       }
     };
-
-    fetchFields("monthly-employee-details");
-  });
-
-  useEffect(() => {
-    if (employees) {
-      if (search) {
-        setFilteredEmployees((prevEmployees) =>
-          prevEmployees.filter((employee) =>
-            employee.name.toLowerCase().includes(search.toLowerCase())
-          )
-        );
-      } else {
-        // If search is empty, reset filteredCompanies to the original list
-        setFilteredEmployees(employees);
-      }
-    }
-  }, [search, employees]);
+    fetchFields("monthly-payments");
+    // eslint-disable-next-line
+  }, []);
 
   useEffect(() => {
-    if (period && filteredEmployees) {
-      const [year, month] = period.split("-");
+    if (monthly_payments) {
+      let filteredPaymentsCopy = [...monthly_payments];
+      // Filter by search input
+      // if (search) {
+      //   filteredPaymentsCopy = filteredPaymentsCopy.filter((payment) =>
+      //     payment.name.toLowerCase().includes(search.toLowerCase())
+      //   );
+      // }
 
-      const _filteredEmployees = employees.map((employee) => {
-        const filteredMonthlyDetails =
-          employee.monthly_details?.filter((monthlyDetail) => {
-            const [monthlyYear, monthlyMonth] = monthlyDetail.period.split("-");
-
+      // Filter by selected period
+      if (period) {
+        newPayment["period"] = period;
+        const [year, month] = period.split("-");
+        filteredPaymentsCopy =
+          filteredPaymentsCopy?.filter((payment) => {
+            const [monthlyYear, monthlyMonth] = payment.period.split("-");
             return monthlyYear === year && monthlyMonth === month;
-          }) ?? []; // If monthly_details is undefined, set to empty array
+          }) ?? [];
+      }
 
-        return {
-          ...employee,
-          monthly_details: filteredMonthlyDetails,
-        };
-      });
-      setFilteredEmployees(_filteredEmployees);
-    } else if (employees) {
-      setFilteredEmployees(employees);
+      setFilteredPayments(filteredPaymentsCopy);
     }
-  }, [period, employees, filteredEmployees]);
+  }, [search, period, monthly_payments]);
 
   const newDataValidation = () => {
-    for (let key in newEmployee) {
-      switch (key) {
-        case "gross_salary":
-        case "total_salary":
-          break;
+    // Generate unique id for new monthly detail
+    const newPaymentId = Date.now().toString(16).padStart(24, "0");
+    newPayment["_id"] = newPaymentId;
 
-        default:
-          if (newEmployee[key] === "") {
-            alert(`${key} cannot be blank.`);
-            console.log(key);
-            return false;
-          }
-          break;
-      }
+    if (!newPayment["period"]) {
+      alert(`Period cannot be blank.`);
+      return false;
     }
+
+    monthlyPaymentFields.map((field) => {
+      switch (field) {
+        case "_id":
+        case "__v":
+          break;
+        default:
+          let e = document.getElementById(`payment-${field}-new`);
+          if (e) {
+            e.id = `monthly-${field}-new-${newPaymentId}`;
+          }
+      }
+    });
+
     return true;
   };
 
   const handleClick = async (e) => {
     switch (e.target.id) {
-      case "add-btn":
-        console.log(newEmployee);
+      case "payment-add-btn":
         if (newDataValidation()) {
-          employees.push(newEmployee);
-          setEmployees([...employees]);
+          monthly_payments.push(newPayment);
+          const emptyNew = emptyNewMonthly(monthlyPaymentFields);
+          setNewPayment(emptyNew);
+          setFilteredPayments([...monthly_payments]);
         }
-        console.log(_employees);
         break;
       default:
-        if (e.target.id.startsWith("employee-del-btn-")) {
-          const match = e.target.id.match(/^employee-del-btn-(.+)$/);
-          const epf_no = match[1];
-          const index = employees.findIndex(
-            (item) => item["epf_no"] === epf_no
+        if (e.target.id.startsWith("payment-del-btn-")) {
+          const match = e.target.id.match(/^payment-del-btn-(.+)$/);
+          const _id = match[1];
+          const index_monthly = monthly_payments.findIndex(
+            (item) => item["_id"] === _id
           );
-          if (index !== -1) {
-            employees.splice(index, 1); // Remove 1 element starting from indexToRemove
-            setEmployees([...employees]);
-          }
-          alert(index);
+          monthly_payments.splice(index_monthly, 1);
+          setFilteredPayments([...monthly_payments]);
         }
     }
   };
@@ -144,105 +134,139 @@ function MonthlyPaymentDetailsTable({
       case "checkbox":
         value = e.target.checked;
         break;
-      //   case "select-one":
-      //     value = e.value;
-      //     break;
       default:
         value = e.target.value;
     }
 
-    if (e.target.id === "search-input-monthly") {
+    if (e.target.id === "search-input-payment") {
       setSearch(value);
     }
-    if (e.target.id === "period-selection") {
+    if (e.target.id === "payment-period-selection") {
       setPeriod(value);
     }
-    if (e.target.id.startsWith("monthly") && e.target.id.endsWith("new")) {
+    if (e.target.id.startsWith("payment") && e.target.id.endsWith("new")) {
       // Extract field_name and _id using regex
-      const match = e.target.id.match(/^monthly-(.+)-(.+)$/);
+      const match = e.target.id.match(/^payment-(.+)-(.+)$/);
       if (match) {
         const field_name = match[1]; // Extracted field_name
-        newEmployee[field_name] = value;
+        console.log(field_name, value);
+        newPayment[field_name] = value;
       }
     }
   };
 
-  const MonthlyDetailRows = ({ employee }) => {
-    // Check if employee is not provided add Employee
-    if (!employee) {
+  const MonthlyPaymentRow = ({ payment }) => {
+    // Check if employee is not provided
+    if (!payment) {
+      if (disabled) {
+        return null;
+      }
       return (
         <tr>
-          <td colSpan="5">New Payment</td>
+          {monthlyPaymentFields.map((field) => {
+            switch (field) {
+              case "_id":
+                return null;
+
+              case "period":
+                return (
+                  <td key={field + "new"} className="text-left">
+                    <MonthInput
+                      key_name={"payment-" + field + "-new"}
+                      value={period}
+                      handleChangeFunction={handleChange}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+              case "epf_collected_day":
+              case "epf_paid_day":
+              case "etf_collected_day":
+              case "etf_paid_day":
+                return (
+                  <td key={field + "new"} className="text-left">
+                    <MonthInput
+                      key_name={"payment-" + field + "-new"}
+                      value={""}
+                      handleChangeFunction={handleChange}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+
+              default:
+                return (
+                  <td key={field + "new"}>
+                    <TextInput
+                      key_name={"payment-" + field + "-new"}
+                      value="" // Empty value for other fields
+                      handleChangeFunction={handleChange}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+            }
+          })}
+          <td className="text-center">
+            <button
+              id="payment-add-btn"
+              onClick={handleClick}
+              className="btn btn-outline-success me-2"
+              disabled={disabled}
+            >
+              Add
+            </button>
+          </td>
         </tr>
       );
     } else {
       return (
-        <>
-          {employee.monthly_details.map((monthlyDetail, index) => (
-            <tr key={index}>
-              <td>{employee.epf_no}</td>
-              <td>{employee.name}</td>
-              {employeeMonthlyDetailFields.map((field) => {
-                switch (field) {
-                  case "_id":
-                    return null; // Skip rendering _id field
-                  case "period":
-                    return (
-                      <td
-                        key={`${field}-${employee._id}-${monthlyDetail._id}`}
-                        className="text-left"
-                      >
-                        <MonthInput
-                          key_name={`monthly-${field}-${employee._id}-${monthlyDetail._id}`}
-                          value={monthlyDetail ? monthlyDetail[field] : ""}
-                          handleChangeFunction={handleChangeFunction}
-                          disabled={disabled} // Pass disabled prop
-                        />
-                      </td>
-                    );
-                  case "active":
-                    return (
-                      <td
-                        key={`${field}-${employee._id}-${monthlyDetail._id}`}
-                        className="text-left"
-                      >
-                        <CheckBoxInput
-                          key_name={`monthly-${field}-${employee._id}-${monthlyDetail._id}`}
-                          value={employee.active}
-                          handleChangeFunction={handleChangeFunction}
-                          disabled={disabled} // Pass disabled prop
-                        />
-                      </td>
-                    );
-                  default:
-                    return (
-                      <td
-                        key={`${field}-${employee._id}-${monthlyDetail._id}`}
-                        className="text-left"
-                      >
-                        <TextInput
-                          key_name={`monthly-${field}-${employee._id}-${monthlyDetail._id}`}
-                          value={monthlyDetail ? monthlyDetail[field] : ""}
-                          handleChangeFunction={handleChangeFunction}
-                          disabled={disabled} // Pass disabled prop
-                        />
-                      </td>
-                    );
-                }
-              })}
-              <td className="txt-center">
-                <button
-                  className="btn btn-outline-danger"
-                  id={`monthly-del-btn-${employee.epf_no}-${monthlyDetail._id}`}
-                  onClick={handleClick}
-                  disabled={disabled}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </>
+        <tr>
+          {monthlyPaymentFields.map((field) => {
+            switch (field) {
+              case "_id":
+                return null;
+
+              case "period":
+              case "epf_collected_day":
+              case "epf_paid_day":
+              case "etf_collected_day":
+              case "etf_paid_day":
+                return (
+                  <td key={field + payment._id} className="text-left">
+                    <MonthInput
+                      key_name={"payment-" + field + "-" + payment._id}
+                      value={payment[field]}
+                      handleChangeFunction={handleChangeFunction}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+
+              default:
+                return (
+                  <td key={field + payment._id} className="text-left">
+                    <TextInput
+                      key_name={"payment-" + field + "-" + payment._id}
+                      value={payment[field] || ""} // Use empty string if value is falsy
+                      handleChangeFunction={handleChangeFunction}
+                      disabled={disabled}
+                    />
+                  </td>
+                );
+            }
+          })}
+          <td className="txt-center">
+            <button
+              className="btn btn-outline-danger"
+              id={"payment-del-btn-" + payment._id}
+              onClick={handleClick}
+              disabled={disabled}
+            >
+              Delete
+            </button>
+          </td>
+        </tr>
       );
     }
   };
@@ -252,31 +276,23 @@ function MonthlyPaymentDetailsTable({
       <div className="mb-3 d-flex align-items-center">
         <p className="h6 me-2">Period :</p>{" "}
         <MonthInput
-          key_name={"period-selection"}
+          key_name={"payment-period-selection"}
           handleChangeFunction={handleChange}
           value={""}
-          disabled={disabled} // Pass disabled prop
         />
       </div>
       <input
         type="text"
         className="form-control mb-3"
-        id="search-input-monthly"
+        id="search-input-payment"
         placeholder="Search Employee..."
         onChange={handleChange}
-        disabled={disabled} // Pass disabled prop
       />
       <div className="scrollable mt-2">
         <table className="table table-responsive table-hover">
           <thead>
             <tr>
-              <th>
-                <TableKey key_name={"EPF NO"} />
-              </th>
-              <th>
-                <TableKey key_name={"NAME"} />
-              </th>
-              {employeeMonthlyDetailFields.map((field) => {
+              {monthlyPaymentFields.map((field) => {
                 switch (field) {
                   case "_id":
                   case "__v":
@@ -295,12 +311,20 @@ function MonthlyPaymentDetailsTable({
             </tr>
           </thead>
           <tbody>
-            {filteredEmployees.map((employee) => {
-              return (
-                <MonthlyDetailRows key={employee.epf_no} employee={employee} />
-              );
-            })}
-            <MonthlyDetailRows />
+            {filteredPayments.length > 0 ? (
+              filteredPayments.map((payment) => {
+                return (
+                  <MonthlyPaymentRow key={payment.period} payment={payment} />
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="5" className="text-center">
+                  No payments found.
+                </td>
+              </tr>
+            )}
+            <MonthlyPaymentRow />
           </tbody>
         </table>
       </div>
@@ -308,4 +332,4 @@ function MonthlyPaymentDetailsTable({
   );
 }
 
-export default MonthlyPaymentDetailsTable;
+export default MonthlyPaymentsTable;
