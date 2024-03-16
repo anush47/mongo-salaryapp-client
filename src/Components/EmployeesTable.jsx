@@ -21,6 +21,8 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
     nic: "9rem",
     divide_by: "5rem",
   };
+  const default_total_variation = 1000; //default total salary variation
+  const default_ot_hours_range = "55-85"; //default value for overtime hours range
 
   const emptyNewEmployee = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
@@ -32,7 +34,13 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
           break;
         case "divide_by":
           obj[key] = 240;
-
+          break;
+        case "ot_hours_range":
+          obj[key] = default_ot_hours_range;
+          break;
+        case "total_variation":
+          obj[key] = default_total_variation;
+          break;
         default:
           obj[key] = null;
           break;
@@ -197,6 +205,30 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                       optionVals={options}
                       handleChangeFunction={handleChange}
                       disabled={disabled}
+                      width={text_area_widths[field]}
+                    />
+                  </td>
+                );
+              case "ot_hours_range":
+                return (
+                  <td key={`${field}-new`} className="text-left">
+                    <TextInput
+                      key_name={`employee-${field}-new`}
+                      value={default_ot_hours_range}
+                      handleChangeFunction={handleChange}
+                      disabled={disabled} // Pass disabled prop
+                      width={text_area_widths[field]}
+                    />
+                  </td>
+                );
+              case "total_variation":
+                return (
+                  <td key={`${field}-new`} className="text-left">
+                    <TextInput
+                      key_name={`employee-${field}-new`}
+                      value={default_total_variation}
+                      handleChangeFunction={handleChange}
+                      disabled={disabled} // Pass disabled prop
                       width={text_area_widths[field]}
                     />
                   </td>

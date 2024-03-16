@@ -37,6 +37,7 @@ function MonthlyEmployeeDetailsTable({
     }, {});
     return result_obj;
   };
+
   useEffect(() => {
     const fetchFields = async (schema) => {
       try {
@@ -143,6 +144,7 @@ function MonthlyEmployeeDetailsTable({
           const match = e.target.id.match(/^monthly-del-btn-(.+)-(.+)$/);
           const epf_no = match[1];
           const monthly_id = match[2];
+
           const index_employee = employees.findIndex(
             // eslint-disable-next-line
             (item) => item["epf_no"] == epf_no
@@ -151,7 +153,19 @@ function MonthlyEmployeeDetailsTable({
             index_employee
           ].monthly_details.findIndex((item) => item["_id"] === monthly_id);
           employees[index_employee].monthly_details.splice(index_monthly, 1);
-          setFilteredEmployees([...employees]);
+
+          const index_employee_filtered = filteredEmployees.findIndex(
+            // eslint-disable-next-line
+            (item) => item["epf_no"] == epf_no
+          );
+          const index_monthly_filtered = filteredEmployees[
+            index_employee_filtered
+          ].monthly_details.findIndex((item) => item["_id"] === monthly_id);
+          filteredEmployees[index_employee_filtered].monthly_details.splice(
+            index_monthly_filtered,
+            1
+          );
+          setFilteredEmployees([...filteredEmployees]);
         }
     }
   };

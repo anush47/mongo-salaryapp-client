@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Companies from "./pages/Companies";
 import EditCompany from "./pages/EditCompany";
+import GenerateMonthly from "./pages/GenerateMonthly";
 import AddCompany from "./pages/AddCompany";
 import Employees from "./pages/Employees";
 import Homepage from "./pages/Homepage";
@@ -13,8 +14,8 @@ function App() {
         <Route path="/companies" element={<Companies />}></Route>
         <Route path="/companies/:employer_no" element={<EditCompany />}></Route>
         <Route
-          path="/companies/:employer_no/employees"
-          element={<Employees />}
+          path="/companies/:employer_no/generate-monthly"
+          element={<GenerateMonthly />}
         ></Route>
         <Route path="/add-company" element={<AddCompany />}></Route>
       </Routes>

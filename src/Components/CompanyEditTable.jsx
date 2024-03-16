@@ -390,6 +390,9 @@ function CompanyEditTable({ employer_no }) {
         <hr className="my-5" />
         <div id="monthly-employee-details-section" className="h3 mb-3">
           <b>Monthly Employee Details</b>
+          <Link to={"./generate-monthly"}>
+            <button className="btn btn-outline-dark m-2 ms-3">Generate</button>
+          </Link>
         </div>
         <MonthlyEmployeeDetailsTable
           employees={newDetails.employees}
