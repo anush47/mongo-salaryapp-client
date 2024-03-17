@@ -19,15 +19,25 @@ function MonthlyEmployeeDetailsTable({
     useState([]);
   const [period, setPeriod] = useState("");
   const [newMonthly, setNewMonthly] = useState({});
-  let monthlyDetailsAvailable = false;
+  const [visibleColumns, setVisibleColumns] = useState([]);
+
+  const currentDate = new Date();
+  //previous month because index start from 0
+  const currentMonth = ("0" + currentDate.getMonth()).slice(-2); // Ensure two digits for month
+  const currentYear = currentDate.getFullYear();
+  const currentYearMonth = currentYear + "-" + currentMonth;
 
   const text_area_widths = { epf_no: "3rem", name: "10rem" };
+  const default_hidden_columns = ["gross_salary", "ot_y", "deductions_y"];
 
   const emptyNewMonthly = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
       switch (key) {
         case "_id":
         case "__v":
+          break;
+        case "period":
+          obj[key] = currentYearMonth;
           break;
         default:
           obj[key] = null;
@@ -48,6 +58,11 @@ function MonthlyEmployeeDetailsTable({
           }
         );
         setEmployeeMonthlyDetailFields(resFields.data);
+        const initialVisibleColumns = resFields.data.filter(
+          (field) => !default_hidden_columns.includes(field)
+        );
+        setVisibleColumns(initialVisibleColumns); // Initially set visible columns
+
         const emptyNew = emptyNewMonthly(resFields.data);
         setNewMonthly(emptyNew);
       } catch (error) {
@@ -83,6 +98,8 @@ function MonthlyEmployeeDetailsTable({
             monthly_details: filteredMonthlyDetails,
           };
         });
+      } else {
+        newMonthly["period"] = currentYearMonth;
       }
 
       setFilteredEmployees(filteredEmployeesCopy);
@@ -102,6 +119,20 @@ function MonthlyEmployeeDetailsTable({
         return false;
       }
     }
+    if (!newMonthly["gross_salary"]) {
+      if (employees.length > 0) {
+        if (employees[0].gross_salary) {
+          newMonthly["gross_salary"] = employees[0].gross_salary;
+        } else {
+          alert(`There should be a gross salary`);
+          return false;
+        }
+      } else {
+        alert(`No Employees in the company.`);
+        return false;
+      }
+    }
+
     if (!newMonthly["period"]) {
       alert(`Period cannot be blank.`);
       return false;
@@ -176,6 +207,18 @@ function MonthlyEmployeeDetailsTable({
     switch (e.target.type) {
       case "checkbox":
         value = e.target.checked;
+        // Handle column visibility change
+        const match_show_field = e.target.id.match(/^show_field-(.+)$/);
+        if (match_show_field) {
+          const field_name = match_show_field[1];
+          if (e.target.checked) {
+            setVisibleColumns((prevColumns) => [...prevColumns, field_name]);
+          } else {
+            setVisibleColumns((prevColumns) =>
+              prevColumns.filter((column) => column !== field_name)
+            );
+          }
+        }
         break;
       default:
         value = e.target.value;
@@ -192,6 +235,14 @@ function MonthlyEmployeeDetailsTable({
       const match = e.target.id.match(/^monthly-(.+)-(.+)$/);
       if (match) {
         const field_name = match[1]; // Extracted field_name
+        if (field_name == "epf_no") {
+          const employee = employees.find(
+            (employee) => employee.epf_no == value
+          );
+          document.getElementById("monthly-gross_salary-new").value =
+            employee.gross_salary;
+          newMonthly.gross_salary = employee.gross_salary;
+        }
         console.log(field_name, value);
         newMonthly[field_name] = value;
       }
@@ -221,32 +272,48 @@ function MonthlyEmployeeDetailsTable({
               )}
             </td>
             {employeeMonthlyDetailFields.map((field) => {
-              switch (field) {
-                case "_id":
-                  return null; // Skip rendering _id field
-                case "period":
-                  return (
-                    <td key={`${field}-new`} className="text-left">
-                      <MonthInput
-                        key_name={`monthly-${field}-new`}
-                        value={period}
-                        handleChangeFunction={handleChange}
-                        disabled={disabled} // Pass disabled prop
-                      />
-                    </td>
-                  );
-                default:
-                  return (
-                    <td key={`${field}-new`} className="text-left">
-                      <TextInput
-                        key_name={`monthly-${field}-new`}
-                        value={""}
-                        handleChangeFunction={handleChange}
-                        disabled={disabled} // Pass disabled prop
-                        width={text_area_widths[field]}
-                      />
-                    </td>
-                  );
+              if (visibleColumns.includes(field)) {
+                switch (field) {
+                  case "_id":
+                    return null; // Skip rendering _id field
+                  case "gross_salary":
+                    return (
+                      <td key={`${field}-new`} className="text-left">
+                        <TextInput
+                          key_name={`monthly-${field}-new`}
+                          value={employees[0].gross_salary}
+                          handleChangeFunction={handleChange}
+                          disabled={disabled} // Pass disabled prop
+                          width={text_area_widths[field]}
+                        />
+                      </td>
+                    );
+                  case "period":
+                    return (
+                      <td key={`${field}-new`} className="text-left">
+                        <MonthInput
+                          key_name={`monthly-${field}-new`}
+                          value={period || currentYearMonth}
+                          handleChangeFunction={handleChange}
+                          disabled={disabled} // Pass disabled prop
+                        />
+                      </td>
+                    );
+                  default:
+                    return (
+                      <td key={`${field}-new`} className="text-left">
+                        <TextInput
+                          key_name={`monthly-${field}-new`}
+                          value={""}
+                          handleChangeFunction={handleChange}
+                          disabled={disabled} // Pass disabled prop
+                          width={text_area_widths[field]}
+                        />
+                      </td>
+                    );
+                }
+              } else {
+                return null;
               }
             })}
             <td className="txt-center">
@@ -273,38 +340,42 @@ function MonthlyEmployeeDetailsTable({
               <td>{employee.epf_no}</td>
               <td>{employee.name}</td>
               {employeeMonthlyDetailFields.map((field) => {
-                switch (field) {
-                  case "_id":
-                    return null; // Skip rendering _id field
-                  case "period":
-                    return (
-                      <td
-                        key={`${field}-${employee._id}-${monthlyDetail._id}`}
-                        className="text-left"
-                      >
-                        <MonthInput
-                          key_name={`monthly-${field}-${employee.epf_no}-${monthlyDetail._id}`}
-                          value={monthlyDetail ? monthlyDetail[field] : ""}
-                          handleChangeFunction={handleChangeFunction}
-                          disabled={disabled} // Pass disabled prop
-                        />
-                      </td>
-                    );
-                  default:
-                    return (
-                      <td
-                        key={`${field}-${employee._id}-${monthlyDetail._id}`}
-                        className="text-left"
-                      >
-                        <TextInput
-                          key_name={`monthly-${field}-${employee.epf_no}-${monthlyDetail._id}`}
-                          value={monthlyDetail ? monthlyDetail[field] : ""}
-                          handleChangeFunction={handleChangeFunction}
-                          disabled={disabled} // Pass disabled prop
-                          width={text_area_widths[field]}
-                        />
-                      </td>
-                    );
+                if (visibleColumns.includes(field)) {
+                  switch (field) {
+                    case "_id":
+                      return null; // Skip rendering _id field
+                    case "period":
+                      return (
+                        <td
+                          key={`${field}-${employee._id}-${monthlyDetail._id}`}
+                          className="text-left"
+                        >
+                          <MonthInput
+                            key_name={`monthly-${field}-${employee.epf_no}-${monthlyDetail._id}`}
+                            value={monthlyDetail ? monthlyDetail[field] : ""}
+                            handleChangeFunction={handleChangeFunction}
+                            disabled={disabled} // Pass disabled prop
+                          />
+                        </td>
+                      );
+                    default:
+                      return (
+                        <td
+                          key={`${field}-${employee._id}-${monthlyDetail._id}`}
+                          className="text-left"
+                        >
+                          <TextInput
+                            key_name={`monthly-${field}-${employee.epf_no}-${monthlyDetail._id}`}
+                            value={monthlyDetail ? monthlyDetail[field] : ""}
+                            handleChangeFunction={handleChangeFunction}
+                            disabled={disabled} // Pass disabled prop
+                            width={text_area_widths[field]}
+                          />
+                        </td>
+                      );
+                  }
+                } else {
+                  return null;
                 }
               })}
               <td className="txt-center">
@@ -341,6 +412,38 @@ function MonthlyEmployeeDetailsTable({
         placeholder="Search Employee..."
         onChange={handleChange}
       />
+      <div className="mt-2 mb-2">
+        <p className="h5">Select columns to display:</p>
+        <div className="d-flex flex-wrap">
+          {employeeMonthlyDetailFields.map((field) => {
+            switch (field) {
+              case "_id":
+              case "__v":
+                return null;
+              default:
+                return (
+                  <div key={field + "check_box"} className="me-3 mb-3">
+                    <label
+                      className="form-check-label"
+                      htmlFor={"show_field-" + field}
+                    >
+                      {" " + field.replace(/_/g, " ").toUpperCase()}
+                    </label>
+                    <div className="form-check form-switch">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id={"show_field-" + field}
+                        onChange={handleChange}
+                        checked={visibleColumns.includes(field)}
+                      />
+                    </div>
+                  </div>
+                );
+            }
+          })}
+        </div>
+      </div>
       <div className="scrollable mt-2">
         <table className="table table-responsive table-hover">
           <thead>
@@ -355,20 +458,26 @@ function MonthlyEmployeeDetailsTable({
               </th>
 
               {employeeMonthlyDetailFields.map((field) => {
-                switch (field) {
-                  case "_id":
-                  case "__v":
-                    return null;
+                if (visibleColumns.includes(field)) {
+                  switch (field) {
+                    case "_id":
+                    case "__v":
+                      return null;
 
-                  default:
-                    return (
-                      <th key={field}>
-                        <TableKey
-                          key_name={field.toUpperCase().replace("_", " ")}
-                        />
-                        <MinWidthSetTextArea width={text_area_widths[field]} />
-                      </th>
-                    );
+                    default:
+                      return (
+                        <th key={field}>
+                          <TableKey
+                            key_name={field.toUpperCase().replace("_", " ")}
+                          />
+                          <MinWidthSetTextArea
+                            width={text_area_widths[field]}
+                          />
+                        </th>
+                      );
+                  }
+                } else {
+                  return null;
                 }
               })}
             </tr>
@@ -381,8 +490,6 @@ function MonthlyEmployeeDetailsTable({
                   employee.monthly_details &&
                   employee.monthly_details.length > 0
                 ) {
-                  // Set the flag to true if at least one employee has monthly details
-                  monthlyDetailsAvailable = true;
                   return (
                     <MonthlyDetailRows
                       key={employee.epf_no}
@@ -395,14 +502,6 @@ function MonthlyEmployeeDetailsTable({
               <tr>
                 <td colSpan="5" className="text-center">
                   No employees found.
-                </td>
-              </tr>
-            )}
-            {/* Display "No monthly details available" only if no employee has monthly details */}
-            {!monthlyDetailsAvailable && !employees && (
-              <tr>
-                <td colSpan="5" className="text-center">
-                  No monthly details available.
                 </td>
               </tr>
             )}

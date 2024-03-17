@@ -189,11 +189,13 @@ function AddCompanyTable() {
                         <TableKey key_name={key} />
                       </th>
                       <td>
-                        <CheckBoxInput
-                          key_name={key}
-                          value={value}
-                          handleChangeFunction={handleChange}
-                        />
+                        <div className="form-check form-switch">
+                          <CheckBoxInput
+                            key_name={key}
+                            value={value}
+                            handleChangeFunction={handleChange}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );

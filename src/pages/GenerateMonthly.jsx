@@ -249,21 +249,140 @@ function GenerateMonthly() {
       return ot_hours;
     };
 
+    const get_random_total_salary = (range) => {
+      let total_salary = 0;
+      // Check if range is a string and not empty
+      if (typeof range === "string" && range.trim() !== "") {
+        const [min, max] = range
+          .split("-")
+          .map((val) => parseFloat(val.trim())); // Split and parse values to integers
+
+        // If only one number is given, it is the value
+        if (!isNaN(min) && isNaN(max)) {
+          total_salary = min;
+        }
+        // If both min and max are valid numbers
+        else if (!isNaN(min) && !isNaN(max)) {
+          total_salary = Math.random() * (max - min) + min;
+        }
+      }
+      return total_salary;
+    };
+
+    const get_random_incentive = (incentive, variation) => {
+      // Parse strings to numbers
+      const parsedIncentive = parseFloat(incentive);
+      const parsedVariation = parseFloat(variation);
+
+      if (
+        !isNaN(parsedIncentive) &&
+        !isNaN(parsedVariation) &&
+        parsedVariation !== 0
+      ) {
+        const halfVariation = Math.abs(parsedVariation) / 2;
+        const min = Math.max(parsedIncentive - halfVariation, 0);
+        const max = parsedIncentive + halfVariation;
+        return Math.random() * (max - min) + min;
+      } else {
+        return parsedIncentive;
+      }
+    };
+
+    const get_random_incentive_allowance = (gross_salary, ot, total_salary) => {
+      const ratio_difference_max = 0.4; // 0.4 means incentive can be from 0.3 to 0.7 of incentive + allowances
+
+      // Calculate the maximum and minimum values for incentive based on the ratio difference
+      const max_incentive_ratio = 0.5 + ratio_difference_max / 2;
+      const min_incentive_ratio = 0.5 - ratio_difference_max / 2;
+
+      const available_range = total_salary - (gross_salary + ot);
+
+      // Calculate the range of incentive
+      const max_incentive = available_range * max_incentive_ratio;
+      const min_incentive = available_range * min_incentive_ratio;
+
+      // Calculate the range of incentive
+      const incentive_range = max_incentive - min_incentive;
+
+      // Generate a random value within the range
+      const incentive = min_incentive + Math.random() * incentive_range;
+
+      // Calculate the corresponding allowances based on the incentive
+      const allowances = total_salary - (gross_salary + ot + incentive);
+
+      return [incentive, allowances];
+    };
+
+    // Example usage:
+    const [incentive, allowances] = get_random_incentive_allowance(
+      3000,
+      200,
+      5000
+    );
+    console.log("Incentive:", incentive);
+    console.log("Allowances:", allowances);
+
     company.employees.forEach((employee) => {
       if (currentMonthlyDetails[employee.epf_no].include) {
+        if (!employee.gross_salary) {
+          alert(
+            `employee ${employee.epf_no} - ${employee.name} does not have gross salary`
+          );
+          return;
+        }
+
         const emptyNew = emptyNewMonthly(employeeMonthlyDetailFields);
+
+        const gross_salary = parseFloat(employee.gross_salary);
 
         const ot_hours = get_random_ot_hours(
           currentMonthlyDetails[employee.epf_no].ot_hours_range
         );
-        const ot =
-          (ot_hours * 1.5 * employee.gross_salary) / employee.divide_by;
+        const ot = (ot_hours * 1.5 * gross_salary) / employee.divide_by;
+
+        const total_salary = get_random_total_salary(
+          currentMonthlyDetails[employee.epf_no].total_range
+        );
+        const deductions = parseFloat(
+          currentMonthlyDetails[employee.epf_no].deductions || 0
+        );
+
+        let [incentive, allowances] = [0, 0];
+        if (employee.incentive) {
+          incentive = get_random_incentive(
+            employee.incentive,
+            employee.incentive_variation
+          );
+          allowances = parseFloat(
+            total_salary - (gross_salary + incentive + ot)
+          );
+        } else {
+          [incentive, allowances] = get_random_incentive_allowance(
+            gross_salary,
+            ot,
+            total_salary
+          );
+        }
+        const month_salary = parseFloat(total_salary - deductions);
 
         //set values of monthlydetails
+        const to_currency = (value, remove_0) => {
+          if (remove_0 && value !== undefined && value == 0) {
+            return "";
+          }
+          return value !== undefined ? value.toFixed(2) : "N/A";
+        };
+
         emptyNew.period = currentMonthlyDetails.period;
 
-        emptyNew.ot_y = ot_hours + " - OT Hours";
-        emptyNew.ot = ot;
+        emptyNew.gross_salary = to_currency(gross_salary);
+        emptyNew.ot_y =
+          ot_hours !== undefined ? ot_hours + " - OT Hours" : "N/A";
+        emptyNew.ot = to_currency(ot);
+        emptyNew.incentive = to_currency(incentive);
+        emptyNew.allowances = to_currency(allowances);
+        emptyNew.deductions = to_currency(deductions, true);
+        emptyNew.month_salary = to_currency(month_salary);
 
         employee.monthly_details.push(emptyNew);
         console.log(emptyNew);
@@ -357,6 +476,9 @@ function GenerateMonthly() {
                   <TableKey key_name={"OT-hours range"} />
                 </th>
                 <th>
+                  <TableKey key_name={"Deductions"} />
+                </th>
+                <th>
                   <TableKey key_name={"Total range"} />
                 </th>
                 <th style={{ display: "flex", alignItems: "center" }}>
@@ -385,6 +507,17 @@ function GenerateMonthly() {
                             "genmonthly-" + employee.epf_no + "-ot_hours_range"
                           }
                           value={employee.ot_hours_range}
+                          handleChangeFunction={handleChange}
+                          disabled={disabled} // Pass disabled prop
+                          resizable={"block"}
+                          height={"1rem"}
+                        />
+                      </td>
+                      <td>
+                        <TextInput
+                          key_name={
+                            "genmonthly-" + employee.epf_no + "-deductions"
+                          }
                           handleChangeFunction={handleChange}
                           disabled={disabled} // Pass disabled prop
                           resizable={"block"}

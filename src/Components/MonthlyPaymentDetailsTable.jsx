@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   CheckBoxInput,
+  DateInput,
   DropdownInput,
   MinWidthSetTextArea,
   MonthInput,
@@ -22,6 +23,22 @@ function MonthlyPaymentDetailsTable({
   const [newPayment, setNewPayment] = useState({});
   const [visibleColumns, setVisibleColumns] = useState([]);
 
+  const currentDate = new Date();
+  //previous month because index start from 0
+  const currentMonth = ("0" + currentDate.getMonth()).slice(-2); // Ensure two digits for month
+  const currentYear = currentDate.getFullYear();
+  const currentYearMonth = currentYear + "-" + currentMonth;
+
+  const default_hidden_columns = [
+    "epf_collected_day",
+    "epf_payment_method",
+    "epf_cheque_no",
+    "etf_collected_day",
+    "etf_payment_method",
+    "etf_cheque_no",
+    "my_payment",
+  ];
+
   const text_area_widths = {
     epf_reference_no: "8rem",
     epf_payment_method: "6rem",
@@ -36,6 +53,8 @@ function MonthlyPaymentDetailsTable({
         case "_id":
         case "__v":
           break;
+        case "period":
+          obj[key] = currentYearMonth;
         default:
           obj[key] = null;
           break;
@@ -55,7 +74,11 @@ function MonthlyPaymentDetailsTable({
           }
         );
         setMonthlyPaymentFields(resFields.data);
-        setVisibleColumns(resFields.data); // Initially set visible columns to all fields
+        const initialVisibleColumns = resFields.data.filter(
+          (field) => !default_hidden_columns.includes(field)
+        );
+        setVisibleColumns(initialVisibleColumns); // Initially set visible columns
+
         const emptyNew = emptyNewMonthly(resFields.data);
         setNewPayment(emptyNew);
       } catch (error) {
@@ -78,6 +101,8 @@ function MonthlyPaymentDetailsTable({
             const [monthlyYear, monthlyMonth] = payment.period.split("-");
             return monthlyYear === year && monthlyMonth === month;
           }) ?? [];
+      } else {
+        newPayment["period"] = currentYearMonth;
       }
 
       setFilteredPayments(filteredPaymentsCopy);
@@ -178,48 +203,50 @@ function MonthlyPaymentDetailsTable({
       return (
         <tr>
           {monthlyPaymentFields.map((field) => {
-            switch (field) {
-              case "_id":
-                return null;
+            if (visibleColumns.includes(field)) {
+              switch (field) {
+                case "_id":
+                  return null;
 
-              case "period":
-                return (
-                  <td key={field + "new"} className="text-left">
-                    <MonthInput
-                      key_name={"payment-" + field + "-new"}
-                      value={period}
-                      handleChangeFunction={handleChange}
-                      disabled={disabled}
-                    />
-                  </td>
-                );
-              case "epf_collected_day":
-              case "epf_paid_day":
-              case "etf_collected_day":
-              case "etf_paid_day":
-                return (
-                  <td key={field + "new"} className="text-left">
-                    <MonthInput
-                      key_name={"payment-" + field + "-new"}
-                      value={""}
-                      handleChangeFunction={handleChange}
-                      disabled={disabled}
-                    />
-                  </td>
-                );
+                case "period":
+                  return (
+                    <td key={field + "new"} className="text-left">
+                      <MonthInput
+                        key_name={"payment-" + field + "-new"}
+                        value={period || currentYearMonth}
+                        handleChangeFunction={handleChange}
+                        disabled={disabled}
+                      />
+                    </td>
+                  );
+                case "epf_collected_day":
+                case "epf_paid_day":
+                case "etf_collected_day":
+                case "etf_paid_day":
+                  return (
+                    <td key={field + "new"} className="text-left">
+                      <DateInput
+                        key_name={"payment-" + field + "-new"}
+                        value={""}
+                        handleChangeFunction={handleChange}
+                        disabled={disabled}
+                      />
+                    </td>
+                  );
 
-              default:
-                return (
-                  <td key={field + "new"}>
-                    <TextInput
-                      key_name={"payment-" + field + "-new"}
-                      value="" // Empty value for other fields
-                      handleChangeFunction={handleChange}
-                      disabled={disabled}
-                      width={text_area_widths[field]}
-                    />
-                  </td>
-                );
+                default:
+                  return (
+                    <td key={field + "new"}>
+                      <TextInput
+                        key_name={"payment-" + field + "-new"}
+                        value="" // Empty value for other fields
+                        handleChangeFunction={handleChange}
+                        disabled={disabled}
+                        width={text_area_widths[field]}
+                      />
+                    </td>
+                  );
+              }
             }
           })}
           <td className="text-center">
@@ -244,13 +271,23 @@ function MonthlyPaymentDetailsTable({
                   return null;
 
                 case "period":
+                  return (
+                    <td key={field + payment._id} className="text-left">
+                      <MonthInput
+                        key_name={"payment-" + field + "-" + payment._id}
+                        value={payment[field]}
+                        handleChangeFunction={handleChangeFunction}
+                        disabled={disabled}
+                      />
+                    </td>
+                  );
                 case "epf_collected_day":
                 case "epf_paid_day":
                 case "etf_collected_day":
                 case "etf_paid_day":
                   return (
                     <td key={field + payment._id} className="text-left">
-                      <MonthInput
+                      <DateInput
                         key_name={"payment-" + field + "-" + payment._id}
                         value={payment[field]}
                         handleChangeFunction={handleChangeFunction}
