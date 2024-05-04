@@ -27,6 +27,25 @@ function CompanyEditTable({ employer_no }) {
     default_etf_payment_method: "1rem",
   };
 
+  const sort_employees = (employees) => {
+    // Sort the employees array based on the epf_no property
+    employees.sort((a, b) => {
+      // Convert epf_no values to numbers and then subtract them for sorting
+      return parseInt(a.epf_no, 10) - parseInt(b.epf_no, 10);
+    });
+  };
+
+  const sortByPeriod = (array) => {
+    array.sort((a, b) => {
+      // Assuming 'period' is a string representing dates in format 'YYYY-MM' or 'YYYY-MM-DD'
+      const dateA = new Date(a.period);
+      const dateB = new Date(b.period);
+
+      // Compare the dates
+      return dateA - dateB;
+    });
+  };
+
   useEffect(() => {
     const fetchCompany = async (employer_no) => {
       try {
@@ -43,10 +62,19 @@ function CompanyEditTable({ employer_no }) {
         companyData.employees.forEach((employee) => {
           if (!employee.monthly_details) {
             employee.monthly_details = [];
+          } else {
+            sortByPeriod(employee.monthly_details);
           }
         });
+
+        if (companyData.employees) {
+          sort_employees(companyData.employees);
+        }
+
         if (!companyData.monthly_payments) {
           companyData.monthly_payments = [];
+        } else {
+          sortByPeriod(companyData.monthly_payments);
         }
 
         setCompany(companyData);
@@ -391,7 +419,9 @@ function CompanyEditTable({ employer_no }) {
         <div id="monthly-employee-details-section" className="h3 mb-3">
           <b>Monthly Employee Details</b>
           <Link to={"./generate-monthly"}>
-            <button className="btn btn-outline-dark m-2 ms-3">Generate</button>
+            <button className="btn btn-outline-success m-2 ms-3">
+              Generate
+            </button>
           </Link>
         </div>
         <MonthlyEmployeeDetailsTable

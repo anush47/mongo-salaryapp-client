@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   CheckBoxInput,
+  DateInput,
   DropdownInput,
+  FileInput,
   MinWidthSetTextArea,
   TableKey,
   TextInput,
@@ -22,13 +24,16 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
     nic: "9rem",
     divide_by: "5rem",
   };
-  const default_total_variation = 1000; //default total salary variation
+
   const default_incentive_variation = 1000;
   const default_ot_hours_range = "55-85"; //default value for overtime hours range
+  const default_total_salary_variation = 4000; //default total salary variation
   const default_hidden_columns = [
     "incentive_variation",
-    "total_variation",
+    "total_salary_variation",
     "ot_hours_range",
+    "designation",
+    "b_card",
   ];
 
   const emptyNewEmployee = (fields) => {
@@ -45,11 +50,11 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
         case "ot_hours_range":
           obj[key] = default_ot_hours_range;
           break;
-        case "total_variation":
-          obj[key] = default_total_variation;
-          break;
         case "incentive_variation":
           obj[key] = default_incentive_variation;
+          break;
+        case "total_salary_variation":
+          obj[key] = default_total_salary_variation;
           break;
         default:
           obj[key] = null;
@@ -123,6 +128,13 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
       alert("EPF number cannot be blank");
       return false;
     }
+    //if epf no already exists
+    if (
+      employees.find((employee) => employee.epf_no == newEmployee["epf_no"])
+    ) {
+      alert("EPF number already exists");
+      return false;
+    }
     return true;
   };
 
@@ -155,6 +167,15 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
         }
     }
   };
+
+  useEffect(() => {
+    Object.keys(newEmployee).forEach((key) => {
+      const e = document.getElementById("employee-" + key + "-new");
+      if (e) {
+        e.value = newEmployee[key] || "";
+      }
+    });
+  }, [visibleColumns]);
 
   const handleChange = async (e) => {
     let value;
@@ -257,25 +278,33 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                     <td key={`${field}-new`} className="text-left">
                       <TextInput
                         key_name={`employee-${field}-new`}
-                        value={default_incentive_variation}
+                        value={default_incentive_variation.toFixed(2)}
                         handleChangeFunction={handleChange}
                         disabled={disabled} // Pass disabled prop
                         width={text_area_widths[field]}
                       />
                     </td>
                   );
-                case "total_variation":
+                case "total_salary_variation":
                   return (
                     <td key={`${field}-new`} className="text-left">
                       <TextInput
                         key_name={`employee-${field}-new`}
-                        value={default_total_variation}
+                        value={default_total_salary_variation.toFixed(2)}
                         handleChangeFunction={handleChange}
                         disabled={disabled} // Pass disabled prop
                         width={text_area_widths[field]}
                       />
                     </td>
                   );
+
+                case "b_card":
+                  return (
+                    <td key={field + "new"} className="text-left">
+                      <FileInput />
+                    </td>
+                  );
+
                 default:
                   return (
                     <td key={field + "new"}>
@@ -336,6 +365,51 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                         value={employee.divide_by}
                         optionKeys={options}
                         optionVals={options}
+                        handleChangeFunction={handleChangeFunction}
+                        disabled={disabled}
+                        width={text_area_widths[field]}
+                      />
+                    </td>
+                  );
+
+                // case "b_card":
+                //   return (
+                //     <td key={field + employee._id} className="text-left">
+                //       <FileInput
+                //         path={
+                //           "C:\\Users\\Anushanga\\Desktop\\Salary Project\\R.T. ENTERPRISES\\2024\\02 - FEBRUARY\\paid_details.txt"
+                //         }
+                //       />
+                //     </td>
+                //   );
+
+                case "b_card":
+                  return (
+                    <td key={field + employee._id} className="text-left">
+                      <DateInput
+                        key_name={"employee-" + field + "-" + employee.epf_no}
+                        value={employee[field] || ""} // Use empty string if value is falsy
+                        handleChangeFunction={handleChangeFunction}
+                        disabled={disabled}
+                        width={text_area_widths[field]}
+                      />
+                    </td>
+                  );
+
+                case "gross_salary":
+                case "incentive":
+                case "incentive_variation":
+                case "total_salary":
+                case "total_salary_variation":
+                  return (
+                    <td key={field + employee._id} className="text-left">
+                      <TextInput
+                        key_name={"employee-" + field + "-" + employee.epf_no}
+                        value={
+                          !isNaN(parseFloat(employee[field]))
+                            ? parseFloat(employee[field]).toFixed(2)
+                            : ""
+                        }
                         handleChangeFunction={handleChangeFunction}
                         disabled={disabled}
                         width={text_area_widths[field]}
@@ -415,7 +489,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
           })}
         </div>
       </div>
-      <div className="scrollable mt-2">
+      <div className="mt-2" style={{ overflowY: "auto", maxHeight: "500px" }}>
         <table className="table table-responsive table-hover">
           <thead>
             <tr>

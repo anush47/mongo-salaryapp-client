@@ -6,6 +6,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import ".//styles.css";
 import Header from "../Components/Header";
 import MonthlyEmployeeDetailsTable from "../Components/MonthlyEmployeeDetailsTable";
+import { generate_monthly_details } from "../GenerationScripts/RandomGeneration";
+
 import {
   CheckBoxInput,
   MonthInput,
@@ -25,13 +27,12 @@ function GenerateMonthly() {
   const [company, setCompany] = useState([]);
   const [newDetails, setNewDetails] = useState([]);
   const [disabled, setDisabled] = useState(true); // State variable for disabled
-  const [currentMonthlyDetails, setCurrentMonthlyDetails] = useState({
+  const [currentMonthly, setCurrentMonthlyDetails] = useState({
     period: currentYearMonth,
   });
   const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [_employees, setEmployees] = useState([]);
   const [search, setSearch] = useState();
-  const [newMonthly, setNewMonthly] = useState({});
   const [includeAll, setIncludeAll] = useState(false);
   const [employeeMonthlyDetailFields, setEmployeeMonthlyDetailFields] =
     useState([]);
@@ -84,19 +85,25 @@ function GenerateMonthly() {
         setNewDetails(Object.assign({}, companyData));
 
         companyData.employees.map((employee) => {
-          const totalSalary = parseFloat(employee.total_salary);
-          const totalVariation = isNaN(parseFloat(employee.total_variation))
-            ? 0
-            : parseFloat(employee.total_variation);
-
-          currentMonthlyDetails[employee.epf_no] = {
-            total_range: `${totalSalary - totalVariation / 2}-${
-              totalSalary + totalVariation / 2
-            }`,
+          const incentive_range =
+            String(
+              parseFloat(employee.incentive) -
+                parseFloat(employee.incentive_variation) / 2
+            ) +
+            "-" +
+            String(
+              parseFloat(employee.incentive) +
+                parseFloat(employee.incentive_variation) / 2
+            );
+          currentMonthly[employee.epf_no] = {
+            total_salary_range: employee.total_salary_range
+              ? employee.total_salary_range
+              : 0,
             ot_hours_range: employee.ot_hours_range
               ? employee.ot_hours_range
               : 0,
             include: employee.active,
+            incentive_range: incentive_range ? incentive_range : 0,
           };
         });
       } catch (error) {
@@ -194,9 +201,9 @@ function GenerateMonthly() {
         const epf_no = match[1];
         const field = match[2];
         if (epf_no != 0) {
-          currentMonthlyDetails[epf_no][field] = value;
+          currentMonthly[epf_no][field] = value;
         } else {
-          currentMonthlyDetails.period = value;
+          currentMonthly.period = value;
         }
       }
     } else if (e.id.startsWith("monthly")) {
@@ -224,175 +231,27 @@ function GenerateMonthly() {
     } else {
       newDetails[e.id] = value;
     }
-    console.log(e.id + ":" + value);
-    console.log(currentMonthlyDetails);
   };
 
   const generateMonthlyPayments = () => {
-    const get_random_ot_hours = (range) => {
-      let ot_hours = 0;
-
-      // Check if range is a string and not empty
-      if (typeof range === "string" && range.trim() !== "") {
-        const [min, max] = range.split("-").map((val) => parseInt(val.trim())); // Split and parse values to integers
-
-        // If only one number is given, it is the value
-        if (!isNaN(min) && isNaN(max)) {
-          ot_hours = min;
-        }
-        // If both min and max are valid numbers
-        else if (!isNaN(min) && !isNaN(max)) {
-          ot_hours = Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-      }
-
-      return ot_hours;
-    };
-
-    const get_random_total_salary = (range) => {
-      let total_salary = 0;
-      // Check if range is a string and not empty
-      if (typeof range === "string" && range.trim() !== "") {
-        const [min, max] = range
-          .split("-")
-          .map((val) => parseFloat(val.trim())); // Split and parse values to integers
-
-        // If only one number is given, it is the value
-        if (!isNaN(min) && isNaN(max)) {
-          total_salary = min;
-        }
-        // If both min and max are valid numbers
-        else if (!isNaN(min) && !isNaN(max)) {
-          total_salary = Math.random() * (max - min) + min;
-        }
-      }
-      return total_salary;
-    };
-
-    const get_random_incentive = (incentive, variation) => {
-      // Parse strings to numbers
-      const parsedIncentive = parseFloat(incentive);
-      const parsedVariation = parseFloat(variation);
-
-      if (
-        !isNaN(parsedIncentive) &&
-        !isNaN(parsedVariation) &&
-        parsedVariation !== 0
-      ) {
-        const halfVariation = Math.abs(parsedVariation) / 2;
-        const min = Math.max(parsedIncentive - halfVariation, 0);
-        const max = parsedIncentive + halfVariation;
-        return Math.random() * (max - min) + min;
-      } else {
-        return parsedIncentive;
-      }
-    };
-
-    const get_random_incentive_allowance = (gross_salary, ot, total_salary) => {
-      const ratio_difference_max = 0.4; // 0.4 means incentive can be from 0.3 to 0.7 of incentive + allowances
-
-      // Calculate the maximum and minimum values for incentive based on the ratio difference
-      const max_incentive_ratio = 0.5 + ratio_difference_max / 2;
-      const min_incentive_ratio = 0.5 - ratio_difference_max / 2;
-
-      const available_range = total_salary - (gross_salary + ot);
-
-      // Calculate the range of incentive
-      const max_incentive = available_range * max_incentive_ratio;
-      const min_incentive = available_range * min_incentive_ratio;
-
-      // Calculate the range of incentive
-      const incentive_range = max_incentive - min_incentive;
-
-      // Generate a random value within the range
-      const incentive = min_incentive + Math.random() * incentive_range;
-
-      // Calculate the corresponding allowances based on the incentive
-      const allowances = total_salary - (gross_salary + ot + incentive);
-
-      return [incentive, allowances];
-    };
-
-    // Example usage:
-    const [incentive, allowances] = get_random_incentive_allowance(
-      3000,
-      200,
-      5000
+    const monthlyDetails = generate_monthly_details(
+      company,
+      currentMonthly.period,
+      currentMonthly
     );
-    console.log("Incentive:", incentive);
-    console.log("Allowances:", allowances);
+    const employeesMap = new Map(
+      company.employees.map((employee) => [String(employee.epf_no), employee])
+    );
 
-    company.employees.forEach((employee) => {
-      if (currentMonthlyDetails[employee.epf_no].include) {
-        if (!employee.gross_salary) {
-          alert(
-            `employee ${employee.epf_no} - ${employee.name} does not have gross salary`
-          );
-          return;
-        }
-
-        const emptyNew = emptyNewMonthly(employeeMonthlyDetailFields);
-
-        const gross_salary = parseFloat(employee.gross_salary);
-
-        const ot_hours = get_random_ot_hours(
-          currentMonthlyDetails[employee.epf_no].ot_hours_range
-        );
-        const ot = (ot_hours * 1.5 * gross_salary) / employee.divide_by;
-
-        const total_salary = get_random_total_salary(
-          currentMonthlyDetails[employee.epf_no].total_range
-        );
-        const deductions = parseFloat(
-          currentMonthlyDetails[employee.epf_no].deductions || 0
-        );
-
-        let [incentive, allowances] = [0, 0];
-        if (employee.incentive) {
-          incentive = get_random_incentive(
-            employee.incentive,
-            employee.incentive_variation
-          );
-          allowances = parseFloat(
-            total_salary - (gross_salary + incentive + ot)
-          );
-        } else {
-          [incentive, allowances] = get_random_incentive_allowance(
-            gross_salary,
-            ot,
-            total_salary
-          );
-        }
-        const month_salary = parseFloat(total_salary - deductions);
-
-        //set values of monthlydetails
-        const to_currency = (value, remove_0) => {
-          if (remove_0 && value !== undefined && value == 0) {
-            return "";
-          }
-          return value !== undefined ? value.toFixed(2) : "N/A";
-        };
-
-        emptyNew.period = currentMonthlyDetails.period;
-
-        emptyNew.gross_salary = to_currency(gross_salary);
-        emptyNew.ot_y =
-          ot_hours !== undefined ? ot_hours + " - OT Hours" : "N/A";
-        emptyNew.ot = to_currency(ot);
-        emptyNew.incentive = to_currency(incentive);
-        emptyNew.allowances = to_currency(allowances);
-        emptyNew.deductions = to_currency(deductions, true);
-        emptyNew.month_salary = to_currency(month_salary);
-
-        employee.monthly_details.push(emptyNew);
-        console.log(emptyNew);
-        setNewMonthly(emptyNewMonthly(employeeMonthlyDetailFields));
-        setFilteredEmployees([...company.employees]);
+    for (const [key, value] of Object.entries(monthlyDetails)) {
+      const employee = employeesMap.get(key);
+      if (employee) {
+        employee.monthly_details.push(value);
       }
-    });
-    alert("Generation complete.");
+    }
 
-    //setNewMonthly(emptyNew);
+    setFilteredEmployees([...company.employees]);
+    alert("Generation complete.");
   };
 
   const handleClick = async (e) => {
@@ -428,7 +287,7 @@ function GenerateMonthly() {
 
       case "change-include-btn":
         company.employees.forEach((employee) => {
-          currentMonthlyDetails[employee.epf_no].include = includeAll;
+          currentMonthly[employee.epf_no].include = includeAll;
           document.getElementById(
             "genmonthly-" + employee.epf_no + "-include"
           ).checked = includeAll;
@@ -467,19 +326,22 @@ function GenerateMonthly() {
             <thead>
               <tr>
                 <th>
-                  <TableKey key_name={"EPF No"} />
+                  <TableKey key_name={"EPF no"} />
                 </th>
                 <th>
-                  <TableKey key_name={"Employee Name"} />
+                  <TableKey key_name={"Name"} />
                 </th>
                 <th>
-                  <TableKey key_name={"OT-hours range"} />
+                  <TableKey key_name={"OT hours range"} />
+                </th>
+                <th>
+                  <TableKey key_name={"Incentive Range"} />
                 </th>
                 <th>
                   <TableKey key_name={"Deductions"} />
                 </th>
                 <th>
-                  <TableKey key_name={"Total range"} />
+                  <TableKey key_name={"Total Salary range"} />
                 </th>
                 <th style={{ display: "flex", alignItems: "center" }}>
                   <TableKey key_name={"Include"} />
@@ -516,6 +378,26 @@ function GenerateMonthly() {
                       <td>
                         <TextInput
                           key_name={
+                            "genmonthly-" + employee.epf_no + "-incentive_range"
+                          }
+                          handleChangeFunction={handleChange}
+                          value={
+                            employee.incentive
+                              ? employee.incentive -
+                                employee.incentive_variation / 2 +
+                                "-" +
+                                (employee.incentive +
+                                  employee.incentive_variation / 2)
+                              : 0
+                          }
+                          disabled={disabled} // Pass disabled prop
+                          resizable={"block"}
+                          height={"1rem"}
+                        />
+                      </td>
+                      <td>
+                        <TextInput
+                          key_name={
                             "genmonthly-" + employee.epf_no + "-deductions"
                           }
                           handleChangeFunction={handleChange}
@@ -527,10 +409,19 @@ function GenerateMonthly() {
                       <td>
                         <TextInput
                           key_name={
-                            "genmonthly-" + employee.epf_no + "-total_range"
+                            "genmonthly-" +
+                            employee.epf_no +
+                            "-total_salary_range"
                           }
                           value={
-                            currentMonthlyDetails[employee.epf_no].total_range
+                            //currentMonthly[employee.epf_no].total_salary_range
+                            employee.total_salary
+                              ? employee.total_salary -
+                                employee.total_salary_variation / 2 +
+                                "-" +
+                                (employee.total_salary +
+                                  employee.total_salary_variation / 2)
+                              : 0
                           }
                           handleChangeFunction={handleChange}
                           disabled={disabled} // Pass disabled prop
@@ -568,7 +459,7 @@ function GenerateMonthly() {
             />
             <button
               id="genmonthly-generate-btn"
-              className="btn btn-outline-primary mt-1 ms-1" // Adding margin to create space between the components
+              className="btn btn-outline-success mt-1 ms-1" // Adding margin to create space between the components
               onClick={handleClick}
             >
               Generate

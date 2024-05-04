@@ -106,6 +106,15 @@ function MonthlyEmployeeDetailsTable({
     }
   }, [search, period, employees]);
 
+  useEffect(() => {
+    Object.keys(newMonthly).forEach((key) => {
+      const e = document.getElementById(`monthly-${key}-new`);
+      if (e) {
+        e.value = newMonthly[key] || "";
+      }
+    });
+  }, [visibleColumns]);
+
   const newDataValidation = () => {
     // Generate unique id for new monthly detail
     const newMonthlyId = Date.now().toString(16).padStart(24, "0");
@@ -185,17 +194,6 @@ function MonthlyEmployeeDetailsTable({
           ].monthly_details.findIndex((item) => item["_id"] === monthly_id);
           employees[index_employee].monthly_details.splice(index_monthly, 1);
 
-          const index_employee_filtered = filteredEmployees.findIndex(
-            // eslint-disable-next-line
-            (item) => item["epf_no"] == epf_no
-          );
-          const index_monthly_filtered = filteredEmployees[
-            index_employee_filtered
-          ].monthly_details.findIndex((item) => item["_id"] === monthly_id);
-          filteredEmployees[index_employee_filtered].monthly_details.splice(
-            index_monthly_filtered,
-            1
-          );
           setFilteredEmployees([...filteredEmployees]);
         }
     }
@@ -263,9 +261,14 @@ function MonthlyEmployeeDetailsTable({
                 <DropdownInput
                   keyName={"monthly-epf_no-new"}
                   optionKeys={employees.map((employee, i) => employee.epf_no)}
-                  optionVals={employees.map(
-                    (employee) => employee.name + " - " + employee.epf_no
-                  )}
+                  optionVals={employees.map((employee) => {
+                    return (
+                      (employee.active ? "✓ - " : "X - ") +
+                      employee.name +
+                      " - " +
+                      employee.epf_no
+                    );
+                  })}
                   handleChangeFunction={handleChange}
                   disabled={disabled} // Pass disabled prop
                 />
@@ -281,7 +284,11 @@ function MonthlyEmployeeDetailsTable({
                       <td key={`${field}-new`} className="text-left">
                         <TextInput
                           key_name={`monthly-${field}-new`}
-                          value={employees[0].gross_salary}
+                          value={
+                            typeof employees[0].gross_salary === "number"
+                              ? employees[0].gross_salary.toFixed(2)
+                              : ""
+                          }
                           handleChangeFunction={handleChange}
                           disabled={disabled} // Pass disabled prop
                           width={text_area_widths[field]}
@@ -358,6 +365,33 @@ function MonthlyEmployeeDetailsTable({
                           />
                         </td>
                       );
+                    case "gross_salary":
+                    case "incentive":
+                    case "allowances":
+                    case "deductions":
+                    case "month_salary":
+                    case "ot":
+                      return (
+                        <td
+                          key={`${field}-${employee._id}-${monthlyDetail._id}`}
+                          className="text-left"
+                        >
+                          <TextInput
+                            key_name={`monthly-${field}-${employee.epf_no}-${monthlyDetail._id}`}
+                            value={
+                              monthlyDetail
+                                ? !isNaN(parseFloat(monthlyDetail[field]))
+                                  ? parseFloat(monthlyDetail[field]).toFixed(2)
+                                  : ""
+                                : ""
+                            }
+                            handleChangeFunction={handleChangeFunction}
+                            disabled={disabled} // Pass disabled prop
+                            width={text_area_widths[field]}
+                          />
+                        </td>
+                      );
+
                     default:
                       return (
                         <td
@@ -444,7 +478,7 @@ function MonthlyEmployeeDetailsTable({
           })}
         </div>
       </div>
-      <div className="scrollable mt-2">
+      <div className="mt-2" style={{ maxHeight: "500px", overflowY: "auto" }}>
         <table className="table table-responsive table-hover">
           <thead>
             <tr>

@@ -9,6 +9,10 @@ import {
   TableKey,
   TextInput,
 } from "./InputComponents";
+import {
+  generate_payment_detail,
+  get_ref_no,
+} from "../GenerationScripts/CalculatePayment";
 
 function MonthlyPaymentDetailsTable({
   company,
@@ -22,39 +26,120 @@ function MonthlyPaymentDetailsTable({
   const [period, setPeriod] = useState("");
   const [newPayment, setNewPayment] = useState({});
   const [visibleColumns, setVisibleColumns] = useState([]);
+  const [paymentProcessingState, setPaymentProcessingState] = useState(false);
 
-  const currentDate = new Date();
-  //previous month because index start from 0
-  const currentMonth = ("0" + currentDate.getMonth()).slice(-2); // Ensure two digits for month
-  const currentYear = currentDate.getFullYear();
-  const currentYearMonth = currentYear + "-" + currentMonth;
+  let previousYearMonth,
+    nextDay = "";
+  const setDays = () => {
+    const currentDate = new Date();
+    const previousMonth =
+      currentDate.getMonth() === 0 ? 12 : currentDate.getMonth();
+    const currentYear =
+      currentDate.getMonth() === 0
+        ? currentDate.getFullYear() - 1
+        : currentDate.getFullYear();
+    previousYearMonth = `${currentYear}-${String(previousMonth).padStart(
+      2,
+      "0"
+    )}`;
+    nextDay = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+  };
+
+  setDays();
 
   const default_hidden_columns = [
-    "epf_collected_day",
+    //"epf_collected_day",
     "epf_payment_method",
+    "epf_amount",
     "epf_cheque_no",
-    "etf_collected_day",
+    //"etf_collected_day",
     "etf_payment_method",
+    "etf_amount",
     "etf_cheque_no",
     "my_payment",
   ];
 
-  const text_area_widths = {
-    epf_reference_no: "8rem",
-    epf_payment_method: "6rem",
-    etf_payment_method: "6rem",
-    epf_cheque_no: "5rem",
-    etf_cheque_no: "5rem",
+  const setup_columns = () => {
+    if (!company["default_epf_payment_method"]) {
+      default_hidden_columns.push("epf_payment_method");
+      if (company["default_epf_payment_method"] !== "Cash") {
+        default_hidden_columns.push("epf_cheque_no");
+      }
+    }
+
+    if (!company["default_etf_payment_method"]) {
+      default_hidden_columns.push("etf_payment_method");
+      if (company["default_etf_payment_method"] !== "Cash") {
+        default_hidden_columns.push("etf_cheque_no");
+      }
+    }
   };
 
-  const emptyNewMonthly = (fields) => {
+  setup_columns();
+  let setted = false;
+  useEffect(() => {
+    if (company && !false) {
+      if (!company["default_epf_payment_method"]) {
+        visibleColumns.push("epf_payment_method");
+        const e_epm = document.getElementById("show_field-epf_payment_method");
+        if (e_epm) {
+          e_epm.checked = true;
+        } else {
+          return;
+        }
+      } else {
+        if (company["default_epf_payment_method"] !== "Cash") {
+          visibleColumns.push("epf_cheque_no");
+          const ecn = document.getElementById("show_field-epf_cheque_no");
+          if (ecn) {
+            ecn.checked = true;
+          } else {
+            return;
+          }
+        }
+      }
+
+      if (!company["default_etf_payment_method"]) {
+        visibleColumns.push("etf_payment_method");
+        const epm2 = document.getElementById("show_field-etf_payment_method");
+        if (epm2) {
+          epm2.checked = true;
+        } else {
+          return;
+        }
+      } else {
+        if (company["default_etf_payment_method"] !== "Cash") {
+          visibleColumns.push("etf_cheque_no");
+          const ecn2 = document.getElementById("show_field-etf_cheque_no");
+          if (ecn2) {
+            ecn2.checked = true;
+          } else {
+            return;
+          }
+        }
+      }
+      setted = true;
+    }
+  }, [company]);
+
+  const text_area_widths = {
+    // epf_reference_no: "8rem",
+    // epf_payment_method: "6rem",
+    // etf_payment_method: "6rem",
+    // epf_cheque_no: "5rem",
+    // etf_cheque_no: "5rem",
+  };
+
+  const emptyNewPayment = (fields, period = null) => {
     const result_obj = fields.reduce((obj, key) => {
       switch (key) {
         case "_id":
         case "__v":
           break;
         case "period":
-          obj[key] = currentYearMonth;
+          obj[key] = period || previousYearMonth;
         default:
           obj[key] = null;
           break;
@@ -79,12 +164,13 @@ function MonthlyPaymentDetailsTable({
         );
         setVisibleColumns(initialVisibleColumns); // Initially set visible columns
 
-        const emptyNew = emptyNewMonthly(resFields.data);
+        const emptyNew = emptyNewPayment(resFields.data);
         setNewPayment(emptyNew);
       } catch (error) {
         console.log(error);
       }
     };
+
     fetchFields("monthly-payments");
     // eslint-disable-next-line
   }, []);
@@ -94,31 +180,50 @@ function MonthlyPaymentDetailsTable({
       let filteredPaymentsCopy = [...monthly_payments];
       // Filter by selected period
       if (period) {
-        newPayment["period"] = period;
         const [year, month] = period.split("-");
         filteredPaymentsCopy =
           filteredPaymentsCopy?.filter((payment) => {
             const [monthlyYear, monthlyMonth] = payment.period.split("-");
             return monthlyYear === year && monthlyMonth === month;
           }) ?? [];
-      } else {
-        newPayment["period"] = currentYearMonth;
       }
 
       setFilteredPayments(filteredPaymentsCopy);
+      change_new_accordingly(period);
     }
   }, [period, monthly_payments]);
 
-  const newDataValidation = () => {
-    // Generate unique id for new monthly detail
-    const newPaymentId = Date.now().toString(16).padStart(24, "0");
-    newPayment["_id"] = newPaymentId;
+  useEffect(() => {
+    if (disabled !== undefined && !disabled) {
+      //change_new_accordingly(newPayment[period] || previousYearMonth);
+      if (!newPayment) {
+        newPayment = {};
+      }
+      newPayment.period = period || previousYearMonth;
+    }
+  }, [disabled]);
 
+  const newDataValidation = () => {
     if (!newPayment["period"]) {
       alert(`Period cannot be blank.`);
       return false;
     }
 
+    if (
+      monthly_payments.find((payment) => payment.period == newPayment.period)
+    ) {
+      alert(`Payment for period ${newPayment.period} already exists.`);
+      return false;
+    }
+
+    if (!newPayment["epf_amount"] || !newPayment["etf_amount"]) {
+      alert(`EPF and ETF amounts cannot be blank`);
+      return false;
+    }
+
+    // Generate unique id for new monthly detail
+    const newPaymentId = Date.now().toString(16).padStart(24, "0");
+    newPayment["_id"] = newPaymentId;
     monthlyPaymentFields.map((field) => {
       switch (field) {
         case "_id":
@@ -135,14 +240,21 @@ function MonthlyPaymentDetailsTable({
   };
 
   const handleClick = async (e) => {
+    //console.log(e.target.id);
     switch (e.target.id) {
       case "payment-add-btn":
         if (newDataValidation()) {
           monthly_payments.push(newPayment);
-          const emptyNew = emptyNewMonthly(monthlyPaymentFields);
+          const emptyNew = emptyNewPayment(monthlyPaymentFields);
           setNewPayment(emptyNew);
           setFilteredPayments([...monthly_payments]);
         }
+        break;
+
+      case "payment-gen-btn":
+        setPaymentProcessingState(true);
+        console.log(newPayment.period);
+        change_new_accordingly(newPayment.period);
         break;
       default:
         if (e.target.id.startsWith("payment-del-btn-")) {
@@ -153,9 +265,71 @@ function MonthlyPaymentDetailsTable({
           );
           monthly_payments.splice(index_monthly, 1);
           setFilteredPayments([...monthly_payments]);
+        } else if (e.target.id.startsWith("payment-epf_reference_no-getbtn-")) {
+          const match = e.target.id.match(
+            /^payment-epf_reference_no-getbtn-(.+)$/
+          );
+          setPaymentProcessingState(true);
+          const _id = match[1];
+          const index_monthly = monthly_payments.findIndex(
+            (item) => item["_id"] === _id
+          );
+          monthly_payments[index_monthly].epf_reference_no = await get_ref_no(
+            company,
+            monthly_payments[index_monthly].period
+          );
+          setFilteredPayments(monthly_payments);
+          setPaymentProcessingState(false);
         }
     }
   };
+
+  useEffect(() => {
+    if (!newPayment) return;
+    Object.keys(newPayment).forEach((key) => {
+      const e = document.getElementById(`payment-${key}-new`);
+      if (e) {
+        switch (key) {
+          case "epf_amount":
+          case "etf_amount":
+          case "my_payment":
+            e.value =
+              typeof newPayment[key] === "number"
+                ? newPayment[key].toFixed(2)
+                : "";
+            break;
+
+          default:
+            e.value = newPayment[key] || "";
+            break;
+        }
+      }
+    });
+  }, [visibleColumns]);
+
+  useEffect(() => {
+    if (!newPayment) return;
+    Object.keys(newPayment).forEach((key) => {
+      const e = document.getElementById(`payment-${key}-new`);
+      if (e) {
+        switch (key) {
+          case "epf_amount":
+          case "etf_amount":
+          case "my_payment":
+            e.value =
+              typeof newPayment[key] === "number"
+                ? newPayment[key].toFixed(2)
+                : "";
+            break;
+
+          default:
+            e.value = newPayment[key] || "";
+            break;
+        }
+        //console.log(key, emptyNew[key]);
+      }
+    });
+  }, [newPayment]);
 
   const handleChange = async (e) => {
     let value;
@@ -189,9 +363,27 @@ function MonthlyPaymentDetailsTable({
           if (match) {
             const field_name = match[1]; // Extracted field_name
             newPayment[field_name] = value;
+            if (field_name === "period") {
+              change_new_accordingly(value);
+            }
           }
         }
     }
+  };
+
+  const change_new_accordingly = async (period) => {
+    if (disabled) return;
+    console.log(period);
+    setPaymentProcessingState(true);
+    setNewPayment(emptyNewPayment(monthlyPaymentFields, period));
+    const payment = await generate_payment_detail(
+      company,
+      period,
+      monthlyPaymentFields
+    );
+    //console.log(payment);
+    setNewPayment(payment);
+    setPaymentProcessingState(false);
   };
 
   const MonthlyPaymentRow = ({ payment }) => {
@@ -213,12 +405,13 @@ function MonthlyPaymentDetailsTable({
                     <td key={field + "new"} className="text-left">
                       <MonthInput
                         key_name={"payment-" + field + "-new"}
-                        value={period || currentYearMonth}
+                        value={previousYearMonth}
                         handleChangeFunction={handleChange}
-                        disabled={disabled}
+                        disabled={disabled || paymentProcessingState}
                       />
                     </td>
                   );
+
                 case "epf_collected_day":
                 case "epf_paid_day":
                 case "etf_collected_day":
@@ -229,7 +422,7 @@ function MonthlyPaymentDetailsTable({
                         key_name={"payment-" + field + "-new"}
                         value={""}
                         handleChangeFunction={handleChange}
-                        disabled={disabled}
+                        disabled={disabled || paymentProcessingState}
                       />
                     </td>
                   );
@@ -241,7 +434,7 @@ function MonthlyPaymentDetailsTable({
                         key_name={"payment-" + field + "-new"}
                         value="" // Empty value for other fields
                         handleChangeFunction={handleChange}
-                        disabled={disabled}
+                        disabled={disabled || paymentProcessingState}
                         width={text_area_widths[field]}
                       />
                     </td>
@@ -253,10 +446,18 @@ function MonthlyPaymentDetailsTable({
             <button
               id="payment-add-btn"
               onClick={handleClick}
-              className="btn btn-outline-success me-2"
-              disabled={disabled}
+              className="btn btn-success m-1"
+              disabled={disabled || paymentProcessingState}
             >
               Add
+            </button>
+            <button
+              id="payment-gen-btn"
+              onClick={handleClick}
+              className="btn btn-outline-success m-1"
+              disabled={disabled || paymentProcessingState}
+            >
+              Gen
             </button>
           </td>
         </tr>
@@ -277,10 +478,24 @@ function MonthlyPaymentDetailsTable({
                         key_name={"payment-" + field + "-" + payment._id}
                         value={payment[field]}
                         handleChangeFunction={handleChangeFunction}
-                        disabled={disabled}
+                        disabled={disabled || paymentProcessingState}
                       />
                     </td>
                   );
+
+                case "epf_reference_no":
+                  return (
+                    <td key={field + payment._id} className="text-left">
+                      <TextInput
+                        key_name={"payment-" + field + "-" + payment._id}
+                        value={payment[field] || ""} // Use empty string if value is falsy
+                        handleChangeFunction={handleChangeFunction}
+                        disabled={disabled || paymentProcessingState}
+                        width={text_area_widths[field]}
+                      />
+                    </td>
+                  );
+
                 case "epf_collected_day":
                 case "epf_paid_day":
                 case "etf_collected_day":
@@ -291,7 +506,26 @@ function MonthlyPaymentDetailsTable({
                         key_name={"payment-" + field + "-" + payment._id}
                         value={payment[field]}
                         handleChangeFunction={handleChangeFunction}
-                        disabled={disabled}
+                        disabled={disabled || paymentProcessingState}
+                      />
+                    </td>
+                  );
+
+                case "epf_amount":
+                case "etf_amount":
+                case "my_payment":
+                  return (
+                    <td key={field + payment._id} className="text-left">
+                      <TextInput
+                        key_name={"payment-" + field + "-" + payment._id}
+                        value={
+                          typeof payment[field] === "number"
+                            ? payment[field].toFixed(2)
+                            : ""
+                        } // Use empty string if value is falsy
+                        handleChangeFunction={handleChangeFunction}
+                        disabled={disabled || paymentProcessingState}
+                        width={text_area_widths[field]}
                       />
                     </td>
                   );
@@ -303,7 +537,7 @@ function MonthlyPaymentDetailsTable({
                         key_name={"payment-" + field + "-" + payment._id}
                         value={payment[field] || ""} // Use empty string if value is falsy
                         handleChangeFunction={handleChangeFunction}
-                        disabled={disabled}
+                        disabled={disabled || paymentProcessingState}
                         width={text_area_widths[field]}
                       />
                     </td>
@@ -314,11 +548,21 @@ function MonthlyPaymentDetailsTable({
             }
           })}
           <td className="txt-center">
+            {!disabled && (
+              <button
+                className="btn btn-outline-dark"
+                id={"payment-epf_reference_no-getbtn-" + payment._id}
+                onClick={handleClick}
+                disabled={disabled || paymentProcessingState}
+              >
+                Get ref no
+              </button>
+            )}
             <button
-              className="btn btn-outline-danger"
+              className="btn btn-outline-danger m-1"
               id={"payment-del-btn-" + payment._id}
               onClick={handleClick}
-              disabled={disabled}
+              disabled={disabled || paymentProcessingState}
             >
               Delete
             </button>
@@ -336,16 +580,17 @@ function MonthlyPaymentDetailsTable({
           key_name={"payment-period-selection"}
           handleChangeFunction={handleChange}
           value={""}
+          disabled={paymentProcessingState}
         />
       </div>
 
-      <input
+      {/* <input
         type="text"
         className="form-control mb-3"
         id="search-input-payment"
         placeholder="Search Employee..."
         onChange={handleChange}
-      />
+      /> */}
 
       <div className="mt-2 mb-2">
         <p className="h5">Select columns to display:</p>
@@ -379,7 +624,7 @@ function MonthlyPaymentDetailsTable({
         </div>
       </div>
 
-      <div className="scrollable mt-2">
+      <div className="mt-2" style={{ overflowY: "auto", maxHeight: "500px" }}>
         <table className="table table-responsive table-hover">
           <thead>
             <tr>

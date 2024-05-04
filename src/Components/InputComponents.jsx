@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 const default_text_width = "100%";
 
 function TextInput({
@@ -162,7 +163,7 @@ function PaymentMethodInput({
           name="setbutton-cash"
           className="btn btn-outline-dark m-1"
           type="button"
-          onClick={(e) => setPaymentMethod("CASH")}
+          onClick={(e) => setPaymentMethod("Cash")}
           disabled={disabled}
         >
           Cash
@@ -183,11 +184,10 @@ function PaymentMethodInput({
 }
 
 function TableKey({ key_name }) {
-  return (
-    <div className="text-start">
-      {key_name.toUpperCase().replace(/_/g, " ")}
-    </div>
-  );
+  // Split the key_name by underscores and capitalize each word
+  const formattedKey = key_name.split("_").join(" ").toUpperCase();
+
+  return <div className="text-start">{formattedKey}</div>;
 }
 
 function TableKeyWithResetBtn({ key_name, resetFuction }) {
@@ -204,6 +204,90 @@ function TableKeyWithResetBtn({ key_name, resetFuction }) {
     </div>
   );
 }
+function FileInput() {
+  const [file, setFile] = useState(null);
+  const [url, setUrl] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    setFile(selectedFile);
+  };
+
+  const handleUrlChange = (event) => {
+    const enteredUrl = event.target.value;
+    setUrl(enteredUrl);
+  };
+
+  const handleSubmit = () => {
+    if (file) {
+      // Handle file upload
+      console.log("File:", file);
+    } else if (url.trim() !== "") {
+      // Handle URL input
+      console.log("URL:", url);
+    } else {
+      alert("Please select a file or enter a URL.");
+      return;
+    }
+    // Close the modal after submission
+    setModalOpen(false);
+  };
+
+  return (
+    <div>
+      <button style={{ margin: "10px" }} onClick={() => setModalOpen(true)}>
+        Open Modal
+      </button>
+      {modalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "20px",
+              borderRadius: "5px",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+            }}
+          >
+            <h2>Upload a File or Enter a URL</h2>
+            <div className="form-group">
+              <input
+                type="file"
+                className="form-control-file"
+                onChange={handleFileChange}
+                accept=".js"
+              />
+            </div>
+            <div className="form-group">
+              <input
+                type="text"
+                className="form-control"
+                onChange={handleUrlChange}
+                placeholder="Enter URL"
+              />
+            </div>
+            <button style={{ marginRight: "5px" }} onClick={handleSubmit}>
+              Submit
+            </button>
+            <button onClick={() => setModalOpen(false)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export {
   TextInput,
@@ -215,4 +299,5 @@ export {
   PaymentMethodInput,
   DropdownInput,
   MinWidthSetTextArea,
+  FileInput,
 };

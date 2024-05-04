@@ -26,7 +26,7 @@ function AddCompanyTable() {
         );
         const resultObject = resFields.data.reduce((obj, key) => {
           switch (key) {
-            case "active_status":
+            case "active":
             case "epf_required":
             case "etf_required":
             case "salary_sheets_required":
