@@ -80,7 +80,7 @@ function MonthlyPaymentDetailsTable({
   setup_columns();
   let setted = false;
   useEffect(() => {
-    if (company && !false) {
+    if (company && !setted) {
       if (!company["default_epf_payment_method"]) {
         visibleColumns.push("epf_payment_method");
         const e_epm = document.getElementById("show_field-epf_payment_method");
