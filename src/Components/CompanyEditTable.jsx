@@ -311,6 +311,7 @@ function CompanyEditTable({ employer_no }) {
                 case "__v":
                 case "employees":
                 case "monthly_payments":
+                case "user":
                   return null;
                 case "default_epf_payment_method":
                 case "default_etf_payment_method":

@@ -53,6 +53,9 @@ function CompaniesTable() {
   const [showSelectedDetails, setShowSelectedDetails] = useState(true);
   const [showGeneratedDetails, setShowGeneratedDetails] = useState(true);
 
+  const [user, setUser] = useState({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const fields = [
     "name",
     "employer_no",
@@ -90,6 +93,9 @@ function CompaniesTable() {
 
   useEffect(() => {
     const fetchCompanies = async (val) => {
+      if (!user) {
+        return;
+      }
       try {
         const resCompanies = await axios.get(
           process.env.REACT_APP_SERVER_URL + "/get-companies",
@@ -115,9 +121,31 @@ function CompaniesTable() {
       }
     };
 
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${process.env.REACT_APP_SERVER_URL}/user/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setUser(response.data);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Handle error fetching user profile, e.g., redirect to login
+        window.location.href = "/login";
+      }
+    };
+
     setVisibleColumns(
       fields.filter((field) => !default_hidden_columns.includes(field))
     );
+
+    fetchUserProfile();
     fetchCompanies();
   }, []);
 
@@ -1164,7 +1192,7 @@ function CompaniesTable() {
 
   return (
     <div>
-      {companies.length === 0 ? (
+      {companies.length === 0 || !isLoggedIn ? (
         <div className="h4">No companies found.</div>
       ) : (
         <div>

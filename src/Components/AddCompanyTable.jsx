@@ -13,6 +13,8 @@ import axios from "axios";
 
 function AddCompanyTable() {
   const [newDetails, setNewDetails] = useState([]);
+  const [user, setUser] = useState({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,7 +57,28 @@ function AddCompanyTable() {
       }
     };
 
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${process.env.REACT_APP_SERVER_URL}/user/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setUser(response.data);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Handle error fetching user profile, e.g., redirect to login
+        window.location.href = "/login";
+      }
+    };
+
     fetchFields("company");
+    fetchUserProfile();
   }, []);
 
   const handleChange = async (e) => {
@@ -91,6 +114,13 @@ function AddCompanyTable() {
   const addCompany = async () => {
     if (dataValidation()) {
       try {
+        //set new details user as id
+        if (user && user._id) {
+          newDetails["user"] = user._id;
+        } else {
+          alert("User not found. Please login again.");
+          navigate("/login");
+        }
         const addCompanyResponse = await axios.post(
           process.env.REACT_APP_SERVER_URL + "/add-company",
           newDetails
@@ -160,6 +190,7 @@ function AddCompanyTable() {
                 case "__v":
                 case "employees":
                 case "monthly_payments":
+                case "user":
                   break;
                 case "default_epf_payment_method":
                 case "default_etf_payment_method":

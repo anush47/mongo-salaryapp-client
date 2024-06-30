@@ -4,11 +4,16 @@ import EditCompany from "./pages/EditCompany";
 import GenerateMonthly from "./pages/GenerateMonthly";
 import AddCompany from "./pages/AddCompany";
 import Homepage from "./pages/Homepage";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 
 function App() {
+  //<BrowserRouter basename={process.env.PUBLIC_URL}>
   return (
-    <BrowserRouter basename={process.env.PUBLIC_URL}>
+    <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route path="/" element={<Homepage />}></Route>
         <Route path="/companies" element={<Companies />}></Route>
         <Route path="/companies/:employer_no" element={<EditCompany />}></Route>
