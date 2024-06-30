@@ -148,7 +148,8 @@ const generate_monthly_detail = (employee, period, currentMonthly = {}) => {
     : get_random_total_salary_from_variation(
         employee.total_salary,
         employee.total_salary_variation
-      );
+      ) +
+      gross_salary * 0.08;
 
   const deductions = parseFloat(currentMonthly.deductions || 0);
 
@@ -158,7 +159,6 @@ const generate_monthly_detail = (employee, period, currentMonthly = {}) => {
     currentMonthly.incentive_range &&
     currentMonthly.incentive_range !== "NaN-NaN"
   ) {
-    console.log(currentMonthly.incentive_range);
     if (currentMonthly.incentive_range === "0") {
       [incentive, allowances] = get_random_incentive_allowance(
         gross_salary,
@@ -184,7 +184,9 @@ const generate_monthly_detail = (employee, period, currentMonthly = {}) => {
       total_salary
     );
   }
-  const month_salary = parseFloat(total_salary - deductions);
+  const month_salary = parseFloat(
+    total_salary - deductions - gross_salary * 0.08
+  );
 
   let emptyNew = {};
   emptyNew.period = period;

@@ -428,6 +428,7 @@ function CompanyEditTable({ employer_no }) {
           employees={newDetails.employees}
           handleChangeFunction={handleChange}
           disabled={disabled}
+          company={company}
         />
         <hr className="my-5" />
         <div id="monthly-payment-details-section" className="h3 mb-3">

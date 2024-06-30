@@ -3,7 +3,6 @@ import Companies from "./pages/Companies";
 import EditCompany from "./pages/EditCompany";
 import GenerateMonthly from "./pages/GenerateMonthly";
 import AddCompany from "./pages/AddCompany";
-import Employees from "./pages/Employees";
 import Homepage from "./pages/Homepage";
 
 function App() {

@@ -472,6 +472,7 @@ function GenerateMonthly() {
             employees={newDetails.employees}
             handleChangeFunction={handleChange}
             disabled={disabled}
+            company={company}
           />
         </div>
       </div>

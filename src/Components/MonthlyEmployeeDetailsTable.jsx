@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
+  CheckBoxInput,
   DropdownInput,
   MinWidthSetTextArea,
   MonthInput,
@@ -12,15 +13,28 @@ function MonthlyEmployeeDetailsTable({
   employees,
   handleChangeFunction,
   disabled,
+  company,
 }) {
+  const additionalFields = ["delete", "payslip"];
+  const default_hidden_columns = [
+    "gross_salary",
+    "ot_y",
+    "deductions_y",
+    "delete",
+  ];
   const [search, setSearch] = useState("");
   const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [employeeMonthlyDetailFields, setEmployeeMonthlyDetailFields] =
     useState([]);
   const [period, setPeriod] = useState("");
   const [newMonthly, setNewMonthly] = useState({});
-  const [visibleColumns, setVisibleColumns] = useState([]);
+  const [visibleColumns, setVisibleColumns] = useState(
+    additionalFields.filter((field) => {
+      return !default_hidden_columns.includes(field);
+    })
+  );
 
+  const [processingState, setProcessingState] = useState(false);
   const currentDate = new Date();
   //previous month because index start from 0
   const currentMonth = ("0" + currentDate.getMonth()).slice(-2); // Ensure two digits for month
@@ -28,7 +42,6 @@ function MonthlyEmployeeDetailsTable({
   const currentYearMonth = currentYear + "-" + currentMonth;
 
   const text_area_widths = { epf_no: "3rem", name: "10rem" };
-  const default_hidden_columns = ["gross_salary", "ot_y", "deductions_y"];
 
   const emptyNewMonthly = (fields) => {
     const result_obj = fields.reduce((obj, key) => {
@@ -58,9 +71,14 @@ function MonthlyEmployeeDetailsTable({
           }
         );
         setEmployeeMonthlyDetailFields(resFields.data);
-        const initialVisibleColumns = resFields.data.filter(
-          (field) => !default_hidden_columns.includes(field)
-        );
+        const initialVisibleColumns = [
+          ...additionalFields.filter(
+            (field) => !default_hidden_columns.includes(field)
+          ),
+          ...resFields.data.filter(
+            (field) => !default_hidden_columns.includes(field)
+          ),
+        ];
         setVisibleColumns(initialVisibleColumns); // Initially set visible columns
 
         const emptyNew = emptyNewMonthly(resFields.data);
@@ -196,6 +214,28 @@ function MonthlyEmployeeDetailsTable({
 
           setFilteredEmployees([...filteredEmployees]);
         }
+        if (e.target.id.startsWith("monthly-payslip-btn-")) {
+          const match = e.target.id.match(/^monthly-payslip-btn-(.+)-(.+)$/);
+          const epf_no = match[1];
+          const monthly_id = match[2];
+          const md = employees
+            .find((employee) => employee.epf_no == epf_no)
+            .monthly_details.find((md) => md._id === monthly_id);
+
+          download_pdf(company, md.period, "payslip", epf_no);
+        } else if (
+          e.target.id === "monthly-payslip_all-btn" &&
+          period &&
+          period.length > 0
+        ) {
+          download_pdf(company, period, "payslip_all");
+        } else if (
+          e.target.id === "monthly-payslip_all_printable-btn" &&
+          period &&
+          period.length > 0
+        ) {
+          download_pdf(company, period, "payslip_all_printable");
+        }
     }
   };
 
@@ -244,6 +284,55 @@ function MonthlyEmployeeDetailsTable({
         console.log(field_name, value);
         newMonthly[field_name] = value;
       }
+    }
+  };
+
+  const download_pdf = async (company, period, type, epf_no = "") => {
+    try {
+      if (!period || !type) {
+        throw new Error("Period and Type are required.");
+      }
+      setProcessingState(true);
+
+      const params = {
+        employer_no: company.employer_no,
+        period: period,
+        type: type,
+        epf_no: epf_no, // Only required for payslip type
+      };
+
+      const res = await axios.get(
+        `${process.env.REACT_APP_SERVER_URL}/generate-pdf`,
+        {
+          params: params,
+          responseType: "blob", // Ensure response type is blob for PDF
+        }
+      );
+
+      const filename = (() => {
+        const contentDisposition = res.headers["content-disposition"];
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename = "(.+)"/);
+          if (match) return match[1];
+        }
+        return `${company.name} - ${period} - ${
+          epf_no ? "(" + epf_no + ")" : ""
+        } ${type}.pdf`; // Default filename
+      })();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove(); // Clean up
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download PDF. " + error.message);
+    } finally {
+      setProcessingState(false);
     }
   };
 
@@ -323,16 +412,31 @@ function MonthlyEmployeeDetailsTable({
                 return null;
               }
             })}
-            <td className="txt-center">
-              <button
-                className="btn btn-outline-success"
-                id={`monthly-add-btn`}
-                onClick={handleClick}
-                disabled={disabled}
-              >
-                Add
-              </button>
-            </td>
+
+            {additionalFields.map((field) => {
+              if (visibleColumns.includes(field)) {
+                switch (field) {
+                  case "payslip":
+                    return (
+                      <td key={field} className="txt-center">
+                        <button
+                          className="btn btn-outline-success"
+                          id={`monthly-add-btn`}
+                          onClick={handleClick}
+                          disabled={disabled}
+                        >
+                          Add
+                        </button>
+                      </td>
+                    );
+
+                  default:
+                    break;
+                }
+              } else {
+                return null;
+              }
+            })}
           </tr>
         </>
       );
@@ -412,16 +516,44 @@ function MonthlyEmployeeDetailsTable({
                   return null;
                 }
               })}
-              <td className="txt-center">
-                <button
-                  className="btn btn-outline-danger"
-                  id={`monthly-del-btn-${employee.epf_no}-${monthlyDetail._id}`}
-                  onClick={handleClick}
-                  disabled={disabled}
-                >
-                  Delete
-                </button>
-              </td>
+
+              {additionalFields.map((field) => {
+                if (visibleColumns.includes(field)) {
+                  switch (field) {
+                    case "payslip":
+                      return (
+                        <td key={field} className="txt-center">
+                          <button
+                            className="btn btn-outline-success"
+                            id={`monthly-payslip-btn-${employee.epf_no}-${monthlyDetail._id}`}
+                            onClick={handleClick}
+                            disabled={processingState}
+                          >
+                            Payslip
+                          </button>
+                        </td>
+                      );
+                    case "delete":
+                      return (
+                        <td key={field} className="txt-center">
+                          <button
+                            className="btn btn-outline-danger"
+                            id={`monthly-del-btn-${employee.epf_no}-${monthlyDetail._id}`}
+                            onClick={handleClick}
+                            disabled={disabled || processingState}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      );
+
+                    default:
+                      break;
+                  }
+                } else {
+                  return null;
+                }
+              })}
             </tr>
           ))}
         </>
@@ -438,6 +570,34 @@ function MonthlyEmployeeDetailsTable({
           handleChangeFunction={handleChange}
           value={""}
         />
+        {period && //if at least one employee has monthly detail on that period
+        employees.some((employee) => {
+          return (
+            employee.monthly_details &&
+            employee.monthly_details.some(
+              (monthlyDetail) => monthlyDetail.period === period
+            )
+          );
+        }) ? (
+          <div>
+            <button
+              className="btn btn-outline-primary ms-2"
+              id={"monthly-payslip_all-btn"}
+              onClick={handleClick}
+              disabled={processingState}
+            >
+              All Pay Slips
+            </button>
+            <button
+              className="btn btn-outline-primary ms-2"
+              id={"monthly-payslip_all_printable-btn"}
+              onClick={handleClick}
+              disabled={processingState}
+            >
+              All Pay Slips Printable
+            </button>
+          </div>
+        ) : null}
       </div>
       <input
         type="text"
@@ -464,17 +624,34 @@ function MonthlyEmployeeDetailsTable({
                       {" " + field.replace(/_/g, " ").toUpperCase()}
                     </label>
                     <div className="form-check form-switch">
-                      <input
-                        type="checkbox"
-                        className="form-check-input"
-                        id={"show_field-" + field}
-                        onChange={handleChange}
-                        checked={visibleColumns.includes(field)}
+                      <CheckBoxInput
+                        key_name={"show_field-" + field}
+                        handleChangeFunction={handleChange}
+                        value={visibleColumns.includes(field)}
                       />
                     </div>
                   </div>
                 );
             }
+          })}
+          {additionalFields.map((field) => {
+            return (
+              <div key={field + "check_box"} className="me-3 mb-3">
+                <label
+                  className="form-check-label"
+                  htmlFor={"show_field-" + field}
+                >
+                  {" " + field.replace(/_/g, " ").toUpperCase()}
+                </label>
+                <div className="form-check form-switch">
+                  <CheckBoxInput
+                    key_name={"show_field-" + field}
+                    value={visibleColumns.includes(field)}
+                    handleChangeFunction={handleChange}
+                  />
+                </div>
+              </div>
+            );
           })}
         </div>
       </div>
@@ -512,6 +689,18 @@ function MonthlyEmployeeDetailsTable({
                   }
                 } else {
                   return null;
+                }
+              })}
+              {additionalFields.map((field) => {
+                if (visibleColumns.includes(field)) {
+                  return (
+                    <th key={field}>
+                      <TableKey
+                        key_name={field.toUpperCase().replace("_", " ")}
+                      />
+                      <MinWidthSetTextArea width={text_area_widths[field]} />
+                    </th>
+                  );
                 }
               })}
             </tr>

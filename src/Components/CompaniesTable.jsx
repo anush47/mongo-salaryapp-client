@@ -50,16 +50,15 @@ function CompaniesTable() {
   const [monthlyDetails, setMonthlyDetails] = useState([]);
   const [monthlyPayments, setMonthlyPayments] = useState([]);
   const [paymentProcessingState, setPaymentProcessingState] = useState(false);
-  const [showSelectedDetails, setShowSelectedDetails] = useState(false);
+  const [showSelectedDetails, setShowSelectedDetails] = useState(true);
   const [showGeneratedDetails, setShowGeneratedDetails] = useState(true);
-  const [showAllPayments, setShowAllPayments] = useState(false);
 
   const fields = [
     "name",
     "employer_no",
     "active",
     "active_employees",
-    "monthly_gen_period",
+    "gen_period",
     "monthly_include",
     "epf_cheque_no",
     "epf_collected_day",
@@ -69,10 +68,13 @@ function CompaniesTable() {
     "etf_paid_day",
     "monthly_gen",
     "payment_gen",
-    "manage",
+    "pdf_print_gen",
+    "pdf_gen",
+    "view",
+    "delete",
   ];
   const default_hidden_columns = [
-    //"monthly_gen_period",
+    "gen_period",
     "monthly_include",
     "epf_collected_day",
     "etf_collected_day",
@@ -82,6 +84,8 @@ function CompaniesTable() {
     "etf_paid_day",
     //"monthly_gen",
     "employer_no",
+    "delete",
+    "pdf_gen",
   ];
 
   useEffect(() => {
@@ -483,6 +487,64 @@ function CompaniesTable() {
         }
         setPaymentProcessingState(false);
       }
+    } else if (
+      e.target.id.startsWith("pdf-gen-") ||
+      e.target.id.startsWith("pdf-print-gen-")
+    ) {
+      let match_employer_no;
+      let printable;
+      let type;
+      let final_type;
+
+      if (e.target.id.startsWith("pdf-print-gen-")) {
+        const match = e.target.id.match(/^pdf-print-gen-(.+)$/);
+        if (match) {
+          match_employer_no = match[1];
+          printable = true;
+        }
+      } else {
+        let match = e.target.id.match(/^pdf-gen-(\w+)-(.+)$/);
+        // Ensure we have a valid match
+        if (match) {
+          type = match[1]; // Extracted type (e.g., all, salary, epf, etf, payslips)
+          match_employer_no = match[2]; // Extracted employer_no
+          printable = false;
+        } else {
+          match_employer_no = "all";
+          printable = false;
+        }
+      }
+
+      if (match_employer_no) {
+        const employer_no = match_employer_no;
+
+        if (employer_no === "all") {
+          // Check if all the periods are the same, if not alert
+          final_type = "";
+          const periods = [];
+          for (const employer_no in paymentStatus) {
+            periods.push(paymentStatus[employer_no].period);
+          }
+          if (new Set(periods).size !== 1) {
+            alert(
+              "Periods are not the same for all companies. Please select the same period for all companies."
+            );
+          } else {
+            await download_pdf_all(periods[0], printable);
+          }
+        } else {
+          const company = companies.find((c) => c.employer_no === employer_no);
+          if (company) {
+            const monthly_payment = company.monthly_payments.find(
+              (p) => p.period === paymentStatus[company.employer_no].period
+            );
+            if (monthly_payment) {
+              final_type = printable ? "all_printable" : type;
+              await download_pdf(company, monthly_payment.period, final_type);
+            }
+          }
+        }
+      }
     } else if (e.target.id === "save-companies-btn") {
       let success = await updateMonthlyAddedCompanies();
       if (success) {
@@ -764,6 +826,99 @@ function CompaniesTable() {
       }
     });
     alert("Monthly details generated for all companies.");
+  };
+
+  const download_pdf_all = async (period, printable = true) => {
+    try {
+      if (!period) {
+        throw new Error("Period is required.");
+      }
+      setPaymentProcessingState(true);
+
+      const params = {
+        period: period,
+        printable: printable,
+      };
+
+      const res = await axios.get(
+        `${process.env.REACT_APP_SERVER_URL}/generate-pdf-all`,
+        {
+          params: params,
+          responseType: "blob", // Ensure response type is blob for PDF
+        }
+      );
+      console.log(res);
+
+      const filename = (() => {
+        const contentDisposition = res.headers["content-disposition"];
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename = "(.+)"/);
+          if (match) return match[1];
+        }
+        return `AllCompanies - ${period}.pdf`; // Default filename
+      })();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove(); // Clean up
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download PDF. " + error.message);
+    } finally {
+      setPaymentProcessingState(false);
+    }
+  };
+
+  const download_pdf = async (company, period, type, epf_no = "") => {
+    try {
+      if (!period || !type) {
+        throw new Error("Period and Type are required.");
+      }
+      setPaymentProcessingState(true);
+
+      const params = {
+        employer_no: company.employer_no,
+        period: period,
+        type: type,
+        epf_no: epf_no, // Only required for payslip type
+      };
+
+      const res = await axios.get(
+        `${process.env.REACT_APP_SERVER_URL}/generate-pdf`,
+        {
+          params: params,
+          responseType: "blob", // Ensure response type is blob for PDF
+        }
+      );
+
+      const filename = (() => {
+        const contentDisposition = res.headers["content-disposition"];
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename = "(.+)"/);
+          if (match) return match[1];
+        }
+        return `${company.name} - ${period} - ${type}.pdf`; // Default filename
+      })();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove(); // Clean up
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download PDF. " + error.message);
+    } finally {
+      setPaymentProcessingState(false);
+    }
   };
 
   const deleteCompany = async (employer_no) => {
@@ -1057,7 +1212,7 @@ function CompaniesTable() {
                 value={previousYearMonth}
                 handleChangeFunction={handleChange}
                 disabled={
-                  !visibleColumns.includes("monthly_gen_period") ||
+                  !visibleColumns.includes("gen_period") ||
                   paymentProcessingState
                 }
               />
@@ -1155,6 +1310,35 @@ function CompaniesTable() {
                                 <TableKey key_name={field} />
                                 <button
                                   id={"payment-gen-all"}
+                                  className="btn btn-outline-success text-left m-1"
+                                  onClick={handleClick}
+                                  disabled={paymentProcessingState}
+                                >
+                                  Gen all
+                                </button>
+                              </th>
+                            );
+                          case "pdf_gen":
+                            return (
+                              <th key={field + "title"}>
+                                <TableKey key_name={field} />
+                                <button
+                                  id={"pdf-gen-all"}
+                                  className="btn btn-outline-success text-left m-1"
+                                  onClick={handleClick}
+                                  disabled={paymentProcessingState}
+                                >
+                                  Gen all
+                                </button>
+                              </th>
+                            );
+
+                          case "pdf_print_gen":
+                            return (
+                              <th key={field + "title"}>
+                                <TableKey key_name={field} />
+                                <button
+                                  id={"pdf-print-gen-all"}
                                   className="btn btn-outline-success text-left m-1"
                                   onClick={handleClick}
                                   disabled={paymentProcessingState}
@@ -1263,7 +1447,7 @@ function CompaniesTable() {
                                   </td>
                                 );
 
-                              case "monthly_gen_period":
+                              case "gen_period":
                                 return (
                                   <td key={company.employer_no + field}>
                                     <MonthInput
@@ -1319,7 +1503,74 @@ function CompaniesTable() {
                                   </td>
                                 );
 
-                              case "manage":
+                              case "pdf_gen":
+                                return (
+                                  <td key={company.employer_no + field}>
+                                    <button
+                                      id={"pdf-gen-all-" + company.employer_no}
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      All
+                                    </button>
+                                    <button
+                                      id={
+                                        "pdf-gen-salary-" + company.employer_no
+                                      }
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      Salary
+                                    </button>
+                                    <button
+                                      id={"pdf-gen-epf-" + company.employer_no}
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      EPF
+                                    </button>
+                                    <button
+                                      id={"pdf-gen-etf-" + company.employer_no}
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      ETF
+                                    </button>
+                                    <button
+                                      id={
+                                        "pdf-gen-payslip_all_printable-" +
+                                        company.employer_no
+                                      }
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      PaySlips
+                                    </button>
+                                  </td>
+                                );
+
+                              case "pdf_print_gen":
+                                return (
+                                  <td key={company.employer_no + field}>
+                                    <button
+                                      id={
+                                        "pdf-print-gen-" + company.employer_no
+                                      }
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      Gen
+                                    </button>
+                                  </td>
+                                );
+
+                              case "view":
                                 return (
                                   <td key={company.employer_no + field}>
                                     <Link
@@ -1332,6 +1583,12 @@ function CompaniesTable() {
                                         View
                                       </button>
                                     </Link>
+                                  </td>
+                                );
+
+                              case "delete":
+                                return (
+                                  <td key={company.employer_no + field}>
                                     <button
                                       className="btn btn-outline-danger text-left m-1"
                                       id={
@@ -1385,18 +1642,20 @@ function CompaniesTable() {
                 />
               </div>
             </div>
+          </div>
 
-            <div>
-              <div className="form-check form-switch">
-                {" Show selected details"}
-                <CheckBoxInput
-                  key_name={"show-selected"}
-                  value={showSelectedDetails}
-                  handleChangeFunction={handleChange}
-                />
-              </div>
+          <div>
+            <div className="form-check form-switch">
+              {" Show selected details"}
+              <CheckBoxInput
+                key_name={"show-selected"}
+                value={showSelectedDetails}
+                handleChangeFunction={handleChange}
+              />
             </div>
           </div>
+
+          <hr className="my-5" />
 
           {showGeneratedDetails &&
             Object.keys(updatedMonthlyDetails).length > 0 && (

@@ -20,12 +20,31 @@ function MonthlyPaymentDetailsTable({
   handleChangeFunction,
   disabled,
 }) {
+  const additionalFields = ["get", "delete", "generate", "print"];
+  const default_hidden_columns = [
+    //"epf_collected_day",
+    "epf_payment_method",
+    "epf_amount",
+    "epf_cheque_no",
+    //"etf_collected_day",
+    "etf_payment_method",
+    "etf_amount",
+    "etf_cheque_no",
+    "my_payment",
+    "get",
+    "delete",
+    "generate",
+  ];
   const [search, setSearch] = useState("");
   const [filteredPayments, setFilteredPayments] = useState([]);
   const [monthlyPaymentFields, setMonthlyPaymentFields] = useState([]);
   const [period, setPeriod] = useState("");
   const [newPayment, setNewPayment] = useState({});
-  const [visibleColumns, setVisibleColumns] = useState([]);
+  const [visibleColumns, setVisibleColumns] = useState(
+    additionalFields.filter((field) => {
+      return !default_hidden_columns.includes(field);
+    })
+  );
   const [paymentProcessingState, setPaymentProcessingState] = useState(false);
 
   let previousYearMonth,
@@ -48,18 +67,6 @@ function MonthlyPaymentDetailsTable({
   };
 
   setDays();
-
-  const default_hidden_columns = [
-    //"epf_collected_day",
-    "epf_payment_method",
-    "epf_amount",
-    "epf_cheque_no",
-    //"etf_collected_day",
-    "etf_payment_method",
-    "etf_amount",
-    "etf_cheque_no",
-    "my_payment",
-  ];
 
   const setup_columns = () => {
     if (!company["default_epf_payment_method"]) {
@@ -159,9 +166,14 @@ function MonthlyPaymentDetailsTable({
           }
         );
         setMonthlyPaymentFields(resFields.data);
-        const initialVisibleColumns = resFields.data.filter(
-          (field) => !default_hidden_columns.includes(field)
-        );
+        const initialVisibleColumns = [
+          ...additionalFields.filter(
+            (field) => !default_hidden_columns.includes(field)
+          ),
+          ...resFields.data.filter(
+            (field) => !default_hidden_columns.includes(field)
+          ),
+        ];
         setVisibleColumns(initialVisibleColumns); // Initially set visible columns
 
         const emptyNew = emptyNewPayment(resFields.data);
@@ -245,6 +257,7 @@ function MonthlyPaymentDetailsTable({
       case "payment-add-btn":
         if (newDataValidation()) {
           monthly_payments.push(newPayment);
+          console.log(newPayment);
           const emptyNew = emptyNewPayment(monthlyPaymentFields);
           setNewPayment(emptyNew);
           setFilteredPayments([...monthly_payments]);
@@ -280,6 +293,25 @@ function MonthlyPaymentDetailsTable({
           );
           setFilteredPayments(monthly_payments);
           setPaymentProcessingState(false);
+        } else if (
+          e.target.id.startsWith("payment-epf-getbtn-") ||
+          e.target.id.startsWith("payment-etf-getbtn-") ||
+          e.target.id.startsWith("payment-salary-getbtn-") ||
+          e.target.id.startsWith("payment-all-getbtn-") ||
+          e.target.id.startsWith("payment-all_printable-getbtn-")
+        ) {
+          const match = e.target.id.match(/^payment-(.+)-getbtn-(.+)$/);
+          const type = match[1];
+          const _id = match[2];
+          //get period
+          const index_monthly = monthly_payments.findIndex(
+            (item) => item["_id"] === _id
+          );
+          await download_pdf(
+            company,
+            monthly_payments[index_monthly].period,
+            type
+          );
         }
     }
   };
@@ -386,9 +418,57 @@ function MonthlyPaymentDetailsTable({
     setPaymentProcessingState(false);
   };
 
+  const download_pdf = async (company, period, type, epf_no = "") => {
+    try {
+      if (!period || !type) {
+        throw new Error("Period and Type are required.");
+      }
+      setPaymentProcessingState(true);
+
+      const params = {
+        employer_no: company.employer_no,
+        period: period,
+        type: type,
+        epf_no: epf_no, // Only required for payslip type
+      };
+
+      const res = await axios.get(
+        `${process.env.REACT_APP_SERVER_URL}/generate-pdf`,
+        {
+          params: params,
+          responseType: "blob", // Ensure response type is blob for PDF
+        }
+      );
+
+      const filename = (() => {
+        const contentDisposition = res.headers["content-disposition"];
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename = "(.+)"/);
+          if (match) return match[1];
+        }
+        return `${company.name} - ${period} - ${type}.pdf`; // Default filename
+      })();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove(); // Clean up
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download PDF. " + error.message);
+    } finally {
+      setPaymentProcessingState(false);
+    }
+  };
+
   const MonthlyPaymentRow = ({ payment }) => {
     // Check if employee is not provided
     if (!payment) {
+      //New Payment
       if (disabled) {
         return null;
       }
@@ -442,27 +522,61 @@ function MonthlyPaymentDetailsTable({
               }
             }
           })}
-          <td className="text-center">
-            <button
-              id="payment-add-btn"
-              onClick={handleClick}
-              className="btn btn-success m-1"
-              disabled={disabled || paymentProcessingState}
-            >
-              Add
-            </button>
-            <button
-              id="payment-gen-btn"
-              onClick={handleClick}
-              className="btn btn-outline-success m-1"
-              disabled={disabled || paymentProcessingState}
-            >
-              Gen
-            </button>
-          </td>
+
+          {additionalFields.map((field) => {
+            if (visibleColumns.includes(field)) {
+              switch (field) {
+                case "print":
+                  return (
+                    <td className="text-center" key={field + "new"}>
+                      <button
+                        id="payment-gen-btn"
+                        onClick={handleClick}
+                        className="btn btn-outline-success m-1"
+                        disabled={disabled || paymentProcessingState}
+                      >
+                        Gen
+                      </button>
+                      <button
+                        id="payment-add-btn"
+                        onClick={handleClick}
+                        className="btn btn-success m-1"
+                        disabled={disabled || paymentProcessingState}
+                      >
+                        Add
+                      </button>
+                    </td>
+                  );
+                case "generate":
+                  return (
+                    <td className="text-center" key={field + "new"}>
+                      <button
+                        id="payment-gen-btn"
+                        onClick={handleClick}
+                        className="btn btn-outline-success m-1"
+                        disabled={disabled || paymentProcessingState}
+                      >
+                        Gen
+                      </button>
+                      <button
+                        id="payment-add-btn"
+                        onClick={handleClick}
+                        className="btn btn-success m-1"
+                        disabled={disabled || paymentProcessingState}
+                      >
+                        Add
+                      </button>
+                    </td>
+                  );
+                default:
+                  return null;
+              }
+            }
+          })}
         </tr>
       );
     } else {
+      //existing payment
       return (
         <tr>
           {monthlyPaymentFields.map((field) => {
@@ -519,8 +633,9 @@ function MonthlyPaymentDetailsTable({
                       <TextInput
                         key_name={"payment-" + field + "-" + payment._id}
                         value={
-                          typeof payment[field] === "number"
-                            ? payment[field].toFixed(2)
+                          typeof payment[field] === "number" ||
+                          !isNaN(parseFloat(payment[field]))
+                            ? parseFloat(payment[field]).toFixed(2)
                             : ""
                         } // Use empty string if value is falsy
                         handleChangeFunction={handleChangeFunction}
@@ -547,26 +662,93 @@ function MonthlyPaymentDetailsTable({
               return null;
             }
           })}
-          <td className="txt-center">
-            {!disabled && (
-              <button
-                className="btn btn-outline-dark"
-                id={"payment-epf_reference_no-getbtn-" + payment._id}
-                onClick={handleClick}
-                disabled={disabled || paymentProcessingState}
-              >
-                Get ref no
-              </button>
-            )}
-            <button
-              className="btn btn-outline-danger m-1"
-              id={"payment-del-btn-" + payment._id}
-              onClick={handleClick}
-              disabled={disabled || paymentProcessingState}
-            >
-              Delete
-            </button>
-          </td>
+
+          {additionalFields.map((field) => {
+            if (visibleColumns.includes(field)) {
+              switch (field) {
+                case "get":
+                  return (
+                    <td key={field + payment._id} className="txt-center">
+                      <button
+                        className="btn btn-outline-dark"
+                        id={"payment-epf_reference_no-getbtn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={disabled || paymentProcessingState}
+                      >
+                        Get ref no
+                      </button>
+                    </td>
+                  );
+                case "generate":
+                  return (
+                    <td key={field + payment._id} className="txt-center">
+                      <button
+                        className="btn m-1 btn-outline-dark"
+                        id={"payment-epf-getbtn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={paymentProcessingState}
+                      >
+                        EPF
+                      </button>
+                      <button
+                        className="btn m-1 btn-outline-dark"
+                        id={"payment-etf-getbtn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={paymentProcessingState}
+                      >
+                        ETF
+                      </button>
+                      <button
+                        className="btn m-1 btn-outline-dark"
+                        id={"payment-salary-getbtn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={paymentProcessingState}
+                      >
+                        Salary
+                      </button>
+                      <button
+                        className="btn m-1 btn-outline-dark"
+                        id={"payment-all-getbtn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={paymentProcessingState}
+                      >
+                        All
+                      </button>
+                    </td>
+                  );
+                case "print":
+                  return (
+                    <td key={field + payment._id} className="txt-center">
+                      <button
+                        className="btn m-1 btn-outline-success"
+                        id={"payment-all_printable-getbtn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={paymentProcessingState}
+                      >
+                        Print
+                      </button>
+                    </td>
+                  );
+
+                case "delete":
+                  return (
+                    <td key={field + payment._id} className="txt-center">
+                      <button
+                        className="btn btn-outline-danger m-1"
+                        id={"payment-del-btn-" + payment._id}
+                        onClick={handleClick}
+                        disabled={disabled || paymentProcessingState}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  );
+
+                default:
+                  return null;
+              }
+            }
+          })}
         </tr>
       );
     }
@@ -621,6 +803,25 @@ function MonthlyPaymentDetailsTable({
                 );
             }
           })}
+          {additionalFields.map((field) => {
+            return (
+              <div key={field + "check_box"} className="me-3 mb-3">
+                <label
+                  className="form-check-label"
+                  htmlFor={"show_field-" + field}
+                >
+                  {" " + field.replace(/_/g, " ").toUpperCase()}
+                </label>
+                <div className="form-check form-switch">
+                  <CheckBoxInput
+                    key_name={"show_field-" + field}
+                    value={visibleColumns.includes(field)}
+                    handleChangeFunction={handleChange}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -649,6 +850,18 @@ function MonthlyPaymentDetailsTable({
                   }
                 } else {
                   return null;
+                }
+              })}
+              {additionalFields.map((field) => {
+                if (visibleColumns.includes(field)) {
+                  return (
+                    <th key={field}>
+                      <TableKey
+                        key_name={field.toUpperCase().replace("_", " ")}
+                      />
+                      <MinWidthSetTextArea width={text_area_widths[field]} />
+                    </th>
+                  );
                 }
               })}
             </tr>
