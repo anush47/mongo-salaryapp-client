@@ -13,7 +13,7 @@ function TextInput({
   const default_text_height = "1rem auto";
   return (
     <textarea
-      className="form-control text-dark"
+      className="form-control text-dark shadow"
       id={key_name}
       onChange={handleChangeFunction}
       defaultValue={value ? value : ""}
@@ -57,7 +57,7 @@ const DropdownInput = ({
       defaultValue={value ? value : optionKeys[0]}
       onChange={handleChangeFunction}
       disabled={disabled}
-      className="form-select m-1"
+      className="form-select m-1 shadow"
       style={{
         width: width ? width : default_dropdow_width,
       }}
@@ -84,7 +84,7 @@ function CheckBoxInput({
 }) {
   return (
     <input
-      className="form-check-input"
+      className="form-check-input shadow"
       type="checkbox"
       id={key_name}
       onChange={handleChangeFunction}
@@ -103,7 +103,7 @@ function DateInput({
 }) {
   return (
     <input
-      className="form-control m-1"
+      className="form-control m-1 shadow"
       type="date"
       id={key_name}
       onChange={handleChangeFunction}
@@ -123,7 +123,7 @@ function MonthInput({
   const defaultValue = value ? value.split("-").slice(0, 2).join("-") : "";
   return (
     <input
-      className="form-control ms-2 me-2"
+      className="form-control ms-2 me-2 shadow"
       type="month"
       id={key_name}
       onChange={handleChangeFunction}
@@ -161,7 +161,7 @@ function PaymentMethodInput({
       <div className="input-group-append">
         <button
           name="setbutton-cash"
-          className="btn btn-outline-dark m-1"
+          className="btn btn-outline-dark m-1 shadow"
           type="button"
           onClick={(e) => setPaymentMethod("Cash")}
           disabled={disabled}
@@ -171,7 +171,7 @@ function PaymentMethodInput({
       </div>
       <div className="input-group-append">
         <button
-          className="btn btn-outline-dark m-1"
+          className="btn btn-outline-dark m-1 shadow"
           type="button"
           onClick={(e) => setPaymentMethod("")}
           disabled={disabled}

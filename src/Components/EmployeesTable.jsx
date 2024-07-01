@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useParams } from "react-router-dom";
 import {
   CheckBoxInput,
   DateInput,
   DropdownInput,
-  FileInput,
   MinWidthSetTextArea,
   TableKey,
   TextInput,
 } from "./InputComponents";
+import { Link } from "react-router-dom";
 
 function EmployeesTable({ employees, handleChangeFunction, disabled }) {
   const [search, setSearch] = useState();
@@ -25,6 +26,9 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
     divide_by: "5rem",
   };
 
+  //employerno
+  const { employer_no } = useParams();
+
   const default_incentive_variation = 1000;
   const default_ot_hours_range = "55-85"; //default value for overtime hours range
   const default_total_salary_variation = 4000; //default total salary variation
@@ -34,6 +38,7 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
     "ot_hours_range",
     "designation",
     "b_card",
+    "incentive",
   ];
 
   const emptyNewEmployee = (fields) => {
@@ -299,11 +304,10 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                   );
 
                 case "b_card":
-                  return (
-                    <td key={field + "new"} className="text-left">
-                      <FileInput />
-                    </td>
-                  );
+                  return null;
+                // <td key={field + "new"} className="text-left">
+                //   <FileInput />
+                // </td>
 
                 default:
                   return (
@@ -393,6 +397,11 @@ function EmployeesTable({ employees, handleChangeFunction, disabled }) {
                         disabled={disabled}
                         width={text_area_widths[field]}
                       />
+                      <Link to={`/abh/${employer_no}/${employee.epf_no}`}>
+                        <button className="btn btn-outline-primary">
+                          Generate
+                        </button>
+                      </Link>
                     </td>
                   );
 

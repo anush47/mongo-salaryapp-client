@@ -77,7 +77,7 @@ function CompaniesTable() {
     "delete",
   ];
   const default_hidden_columns = [
-    "gen_period",
+    //"gen_period",
     "monthly_include",
     "epf_collected_day",
     "etf_collected_day",
@@ -1324,7 +1324,7 @@ function CompaniesTable() {
                                 <TableKey key_name={field} />
                                 <button
                                   id={"monthly-gen-all"}
-                                  className="btn btn-outline-success text-left m-1"
+                                  className="btn btn-outline-success text-left m-1 shadow"
                                   onClick={handleClick}
                                   disabled={paymentProcessingState}
                                 >
@@ -1338,7 +1338,7 @@ function CompaniesTable() {
                                 <TableKey key_name={field} />
                                 <button
                                   id={"payment-gen-all"}
-                                  className="btn btn-outline-success text-left m-1"
+                                  className="btn btn-outline-success text-left m-1 shadow"
                                   onClick={handleClick}
                                   disabled={paymentProcessingState}
                                 >
@@ -1352,7 +1352,7 @@ function CompaniesTable() {
                                 <TableKey key_name={field} />
                                 <button
                                   id={"pdf-gen-all"}
-                                  className="btn btn-outline-success text-left m-1"
+                                  className="btn btn-outline-success text-left m-1 shadow"
                                   onClick={handleClick}
                                   disabled={paymentProcessingState}
                                 >
@@ -1367,7 +1367,7 @@ function CompaniesTable() {
                                 <TableKey key_name={field} />
                                 <button
                                   id={"pdf-print-gen-all"}
-                                  className="btn btn-outline-success text-left m-1"
+                                  className="btn btn-outline-success text-left m-1 shadow"
                                   onClick={handleClick}
                                   disabled={paymentProcessingState}
                                 >
