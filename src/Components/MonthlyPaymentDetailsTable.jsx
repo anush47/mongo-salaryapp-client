@@ -764,6 +764,27 @@ function MonthlyPaymentDetailsTable({
           value={""}
           disabled={paymentProcessingState}
         />
+        {/* {period && (
+          <div>
+            <button
+              id="payment-gen-btn"
+              onClick={handleClick}
+              className="btn btn-outline-success m-1"
+              disabled={paymentProcessingState}
+            >
+              Gen
+            </button>
+
+            <button
+              id="payment-add-btn"
+              onClick={handleClick}
+              className="btn btn-success m-1"
+              disabled={paymentProcessingState}
+            >
+              Add
+            </button>
+          </div>
+        )} */}
       </div>
 
       {/* <input

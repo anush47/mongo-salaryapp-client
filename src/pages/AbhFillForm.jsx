@@ -292,7 +292,7 @@ const AbhFillForm = () => {
                   <TextInput
                     key_name={`nomination_relationship_${index}`}
                     handleChangeFunction={handleChange}
-                    value={nomination.address}
+                    value={nomination.relationship}
                     height={defaultHeight}
                   />
                 </td>
