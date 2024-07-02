@@ -65,7 +65,7 @@ const calculate_epf_etf_payment = (period, company) => {
 
 const get_day_after = (after_days) => {
   let date = new Date();
-  date.setDate(date.getDate() + after_days + 1);
+  date.setDate(date.getDate() + after_days);
   //return in yyyy-mm-dd format
   return date.toISOString().split("T")[0];
 };

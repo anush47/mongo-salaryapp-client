@@ -16,6 +16,13 @@ import {
 } from "../Components/InputComponents";
 
 function GenerateMonthly() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading completion after initial render
+    setIsLoading(false);
+  }, []);
+
   const currentDate = new Date();
   //previous month because index start from 0
   const currentMonth = ("0" + currentDate.getMonth()).slice(-2); // Ensure two digits for month
@@ -302,178 +309,192 @@ function GenerateMonthly() {
 
   return (
     <div className="container mt-3">
-      <Header title={(company ? company.name : null) + " - Monthly Details"} />
-      <Link to={"/companies/" + params.employer_no}>
-        <button className="btn btn-outline-dark m-1">Back</button>
-      </Link>
-      <button
-        id="edit-btn"
-        onClick={handleClick}
-        className="btn btn-primary m-1"
+      <div
+        className={`mt-3 fade ${isLoading ? "fade-out" : "fade-in"}`}
+        style={{
+          transition: "opacity 0.25s ease-in-out",
+          opacity: isLoading ? 0 : 1,
+        }}
       >
-        Edit
-      </button>
-      <div className="scrollable mt-2">
-        <div className="container">
-          <input
-            type="text"
-            className="form-control mb-3"
-            id="search-input"
-            placeholder="Search Employees..."
-            onChange={handleChange}
-          ></input>
-          <table className="table table-hover table-responsive">
-            <thead>
-              <tr>
-                <th>
-                  <TableKey key_name={"EPF no"} />
-                </th>
-                <th>
-                  <TableKey key_name={"Name"} />
-                </th>
-                <th>
-                  <TableKey key_name={"OT hours range"} />
-                </th>
-                <th>
-                  <TableKey key_name={"Incentive Range"} />
-                </th>
-                <th>
-                  <TableKey key_name={"Deductions"} />
-                </th>
-                <th>
-                  <TableKey key_name={"Total Salary range"} />
-                </th>
-                <th style={{ display: "flex", alignItems: "center" }}>
-                  <TableKey key_name={"Include"} />
-                  <button
-                    id="change-include-btn"
-                    className="btn btn-outline-dark m-1 ms-2" // Adding margin to create space between the components
-                    onClick={handleClick}
-                    disabled={disabled}
-                  >
-                    Change
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEmployees ? (
-                filteredEmployees.map((employee) => {
-                  return (
-                    <tr key={employee.epf_no}>
-                      <td>{employee.epf_no}</td>
-                      <td>{employee.name}</td>
-                      <td>
-                        <TextInput
-                          key_name={
-                            "genmonthly-" + employee.epf_no + "-ot_hours_range"
-                          }
-                          value={employee.ot_hours_range}
-                          handleChangeFunction={handleChange}
-                          disabled={disabled} // Pass disabled prop
-                          resizable={"block"}
-                          height={"1rem"}
-                        />
-                      </td>
-                      <td>
-                        <TextInput
-                          key_name={
-                            "genmonthly-" + employee.epf_no + "-incentive_range"
-                          }
-                          handleChangeFunction={handleChange}
-                          value={
-                            employee.incentive
-                              ? employee.incentive -
-                                employee.incentive_variation / 2 +
-                                "-" +
-                                (employee.incentive +
-                                  employee.incentive_variation / 2)
-                              : 0
-                          }
-                          disabled={disabled} // Pass disabled prop
-                          resizable={"block"}
-                          height={"1rem"}
-                        />
-                      </td>
-                      <td>
-                        <TextInput
-                          key_name={
-                            "genmonthly-" + employee.epf_no + "-deductions"
-                          }
-                          handleChangeFunction={handleChange}
-                          disabled={disabled} // Pass disabled prop
-                          resizable={"block"}
-                          height={"1rem"}
-                        />
-                      </td>
-                      <td>
-                        <TextInput
-                          key_name={
-                            "genmonthly-" +
-                            employee.epf_no +
-                            "-total_salary_range"
-                          }
-                          value={
-                            //currentMonthly[employee.epf_no].total_salary_range
-                            employee.total_salary
-                              ? employee.total_salary -
-                                employee.total_salary_variation / 2 +
-                                "-" +
-                                (employee.total_salary +
-                                  employee.total_salary_variation / 2)
-                              : 0
-                          }
-                          handleChangeFunction={handleChange}
-                          disabled={disabled} // Pass disabled prop
-                          resizable={"block"}
-                          height={"1rem"}
-                        />
-                      </td>
-                      <td>
-                        <div className="form-check form-switch">
-                          <CheckBoxInput
-                            key_name={
-                              "genmonthly-" + employee.epf_no + "-include"
-                            }
-                            value={employee.active}
-                            handleChangeFunction={handleChange}
-                            disabled={disabled}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
+        <Header
+          title={(company ? company.name : null) + " - Monthly Details"}
+        />
+        <Link to={"/companies/" + params.employer_no}>
+          <button className="btn btn-outline-dark m-1">Back</button>
+        </Link>
+        <button
+          id="edit-btn"
+          onClick={handleClick}
+          className="btn btn-primary m-1"
+        >
+          Edit
+        </button>
+        <div className="scrollable mt-2">
+          <div className="container">
+            <input
+              type="text"
+              className="form-control mb-3"
+              id="search-input"
+              placeholder="Search Employees..."
+              onChange={handleChange}
+            ></input>
+            <table className="table table-hover table-responsive">
+              <thead>
                 <tr>
-                  <td colSpan={3}>No employees found</td>
+                  <th>
+                    <TableKey key_name={"EPF no"} />
+                  </th>
+                  <th>
+                    <TableKey key_name={"Name"} />
+                  </th>
+                  <th>
+                    <TableKey key_name={"OT hours range"} />
+                  </th>
+                  <th>
+                    <TableKey key_name={"Incentive Range"} />
+                  </th>
+                  <th>
+                    <TableKey key_name={"Deductions"} />
+                  </th>
+                  <th>
+                    <TableKey key_name={"Total Salary range"} />
+                  </th>
+                  <th style={{ display: "flex", alignItems: "center" }}>
+                    <TableKey key_name={"Include"} />
+                    <button
+                      id="change-include-btn"
+                      className="btn btn-outline-dark m-1 ms-2" // Adding margin to create space between the components
+                      onClick={handleClick}
+                      disabled={disabled}
+                    >
+                      Change
+                    </button>
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <MonthInput
-              key_name={"genmonthly-0-period"}
-              value={currentYearMonth}
-              handleChangeFunction={handleChange}
-            />
-            <button
-              id="genmonthly-generate-btn"
-              className="btn btn-outline-success mt-1 ms-1" // Adding margin to create space between the components
-              onClick={handleClick}
-            >
-              Generate
-            </button>
+              </thead>
+              <tbody>
+                {filteredEmployees ? (
+                  filteredEmployees.map((employee) => {
+                    return (
+                      <tr key={employee.epf_no}>
+                        <td>{employee.epf_no}</td>
+                        <td>{employee.name}</td>
+                        <td>
+                          <TextInput
+                            key_name={
+                              "genmonthly-" +
+                              employee.epf_no +
+                              "-ot_hours_range"
+                            }
+                            value={employee.ot_hours_range}
+                            handleChangeFunction={handleChange}
+                            disabled={disabled} // Pass disabled prop
+                            resizable={"block"}
+                            height={"1rem"}
+                          />
+                        </td>
+                        <td>
+                          <TextInput
+                            key_name={
+                              "genmonthly-" +
+                              employee.epf_no +
+                              "-incentive_range"
+                            }
+                            handleChangeFunction={handleChange}
+                            value={
+                              employee.incentive
+                                ? employee.incentive -
+                                  employee.incentive_variation / 2 +
+                                  "-" +
+                                  (employee.incentive +
+                                    employee.incentive_variation / 2)
+                                : 0
+                            }
+                            disabled={disabled} // Pass disabled prop
+                            resizable={"block"}
+                            height={"1rem"}
+                          />
+                        </td>
+                        <td>
+                          <TextInput
+                            key_name={
+                              "genmonthly-" + employee.epf_no + "-deductions"
+                            }
+                            handleChangeFunction={handleChange}
+                            disabled={disabled} // Pass disabled prop
+                            resizable={"block"}
+                            height={"1rem"}
+                          />
+                        </td>
+                        <td>
+                          <TextInput
+                            key_name={
+                              "genmonthly-" +
+                              employee.epf_no +
+                              "-total_salary_range"
+                            }
+                            value={
+                              //currentMonthly[employee.epf_no].total_salary_range
+                              employee.total_salary
+                                ? employee.total_salary -
+                                  employee.total_salary_variation / 2 +
+                                  "-" +
+                                  (employee.total_salary +
+                                    employee.total_salary_variation / 2)
+                                : 0
+                            }
+                            handleChangeFunction={handleChange}
+                            disabled={disabled} // Pass disabled prop
+                            resizable={"block"}
+                            height={"1rem"}
+                          />
+                        </td>
+                        <td>
+                          <div className="form-check form-switch">
+                            <CheckBoxInput
+                              key_name={
+                                "genmonthly-" + employee.epf_no + "-include"
+                              }
+                              value={employee.active}
+                              handleChangeFunction={handleChange}
+                              disabled={disabled}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={3}>No employees found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <MonthInput
+                key_name={"genmonthly-0-period"}
+                value={currentYearMonth}
+                handleChangeFunction={handleChange}
+              />
+              <button
+                id="genmonthly-generate-btn"
+                className="btn btn-outline-success mt-1 ms-1" // Adding margin to create space between the components
+                onClick={handleClick}
+              >
+                Generate
+              </button>
+            </div>
           </div>
-        </div>
-        <hr className="my-5" />
-        <div className="container">
-          <MonthlyEmployeeDetailsTable
-            employees={newDetails.employees}
-            handleChangeFunction={handleChange}
-            disabled={disabled}
-            company={company}
-          />
+          <hr className="my-5" />
+          <div className="container">
+            <MonthlyEmployeeDetailsTable
+              employees={newDetails.employees}
+              handleChangeFunction={handleChange}
+              disabled={disabled}
+              company={company}
+            />
+          </div>
         </div>
       </div>
     </div>

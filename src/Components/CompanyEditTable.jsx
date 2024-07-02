@@ -261,40 +261,40 @@ function CompanyEditTable({ employer_no }) {
       <Header title={company ? company.name : "Company Details"} />
       <div className="text-start">
         <Link to={"/companies"}>
-          <button className="btn btn-outline-dark m-1">Back</button>
+          <button className="btn btn-outline-dark m-1 shadow">Back</button>
         </Link>
         <button
           id="company-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark m-1"
+          className="btn btn-outline-dark m-1 shadow"
         >
           Company
         </button>
         <button
           id="employees-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark m-1"
+          className="btn btn-outline-dark m-1 shadow"
         >
           Employees
         </button>
         <button
           id="monthly-employee-details-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark m-1"
+          className="btn btn-outline-dark m-1 shadow"
         >
           Monthly Employee Details
         </button>
         <button
           id="monthly-payment-details-btn"
           onClick={handleClick}
-          className="btn btn-outline-dark m-1"
+          className="btn btn-outline-dark m-1 shadow"
         >
           Monthly Payment Details
         </button>
         <button
           id="edit-btn"
           onClick={handleClick}
-          className="btn btn-primary m-1"
+          className="btn btn-primary m-1 shadow"
         >
           Edit
         </button>

@@ -73,6 +73,7 @@ function CompaniesTable() {
     "payment_gen",
     "pdf_print_gen",
     "pdf_gen",
+    "auto_gen",
     "view",
     "delete",
   ];
@@ -85,7 +86,10 @@ function CompaniesTable() {
     "etf_cheque_no",
     "epf_paid_day",
     "etf_paid_day",
-    //"monthly_gen",
+    "monthly_gen",
+    "payment_gen",
+    "pdf_print_gen",
+    "pdf_gen",
     "employer_no",
     "delete",
     "pdf_gen",
@@ -448,148 +452,183 @@ function CompaniesTable() {
     }
   }, [visibleColumns]);
 
+  const handleDeleteCompany = async (employerNo) => {
+    // Find the company with matching employer number
+    const companyToDelete = companies.find(
+      (company) => company.employer_no == employerNo
+    );
+
+    if (companyToDelete) {
+      // Confirm deletion with user
+      const confirmDelete = window.confirm(
+        `Are you sure you want to delete ${companyToDelete.name}?`
+      );
+
+      // If user confirms deletion, proceed with deletion
+      if (confirmDelete) {
+        try {
+          // Call the deleteCompany function with the employer number
+          await deleteCompany(employerNo);
+        } catch (error) {
+          alert(`An error occurred while deleting the company: \n${error}`);
+        }
+      }
+    } else {
+      alert("Company not found.");
+    }
+  };
+
+  const handleMonthlyGen = (employerNo) => {
+    setPaymentProcessingState(true);
+    if (employerNo == "all") {
+      monthly_gen_companies(companies, paymentStatus);
+    } else {
+      const company = companies.find((c) => c.employer_no === employerNo);
+      monthly_gen_company(company, paymentStatus[employerNo].period);
+      alert(
+        `Monthly details generated for ${company.name} - ${paymentStatus[employerNo].period}`
+      );
+    }
+    setPaymentProcessingState(false);
+  };
+
+  const handlePaymentGen = async (employerNo) => {
+    setPaymentProcessingState(true);
+    if (employerNo == "all") {
+      await payment_gen_companies(companies, paymentStatus);
+    } else {
+      const company = companies.find((c) => c.employer_no === employerNo);
+      await payment_gen_company(company, paymentStatus[employerNo].period);
+    }
+    setPaymentProcessingState(false);
+  };
+
+  const handlePdfGen = async (id) => {
+    let match_employer_no;
+    let printable;
+    let type;
+    let final_type;
+
+    if (id.startsWith("pdf-print-gen-")) {
+      const match = id.match(/^pdf-print-gen-(.+)$/);
+      if (match) {
+        match_employer_no = match[1];
+        printable = true;
+      }
+    } else {
+      let match = id.match(/^pdf-gen-(\w+)-(.+)$/);
+      // Ensure we have a valid match
+      if (match) {
+        type = match[1]; // Extracted type (e.g., all, salary, epf, etf, payslips)
+        match_employer_no = match[2]; // Extracted employer_no
+        printable = false;
+      } else {
+        match_employer_no = "all";
+        printable = false;
+      }
+    }
+
+    if (match_employer_no) {
+      const employerNo = match_employer_no;
+
+      if (employerNo === "all") {
+        // Check if all the periods are the same, if not alert
+        final_type = "";
+        const periods = [];
+        for (const employerNo in paymentStatus) {
+          periods.push(paymentStatus[employerNo].period);
+        }
+        if (new Set(periods).size !== 1) {
+          alert(
+            "Periods are not the same for all companies. Please select the same period for all companies."
+          );
+        } else {
+          await download_pdf_all(periods[0], printable);
+        }
+      } else {
+        const company = companies.find((c) => c.employer_no === employerNo);
+        if (company) {
+          const monthly_payment = company.monthly_payments.find(
+            (p) => p.period === paymentStatus[company.employer_no].period
+          );
+          if (monthly_payment) {
+            final_type = printable ? "all_printable" : type;
+            await download_pdf(company, monthly_payment.period, final_type);
+          }
+        }
+      }
+    }
+  };
+
+  const handleAutoGen = async (employerNo) => {
+    handleMonthlyGen(employerNo);
+    await handlePaymentGen(employerNo);
+    await handleSaveCompanies();
+    await handlePdfGen(`pdf-print-gen-${employerNo}`);
+    //refresh
+    window.location.reload();
+    console.log("hukai");
+    if (employerNo == "all") {
+      // Handle case for all companies
+    } else {
+      const company = companies.find((c) => c.employer_no === employerNo);
+      if (company) {
+      }
+    }
+  };
+
+  const handleSaveCompanies = async () => {
+    let success = await updateMonthlyAddedCompanies();
+    if (success) {
+      alert("Companies updated successfully.");
+    } else {
+      alert("An error occurred while updating companies.");
+    }
+  };
+
+  const handleDeleteMonthly = () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to remove the selected monthly details?\n" +
+        getMonthlyDetailsCompaniesandPeriod(monthlyDetails).join(",\n")
+    );
+    if (confirmDelete) {
+      delete_monthly(monthlyDetails, companies);
+    }
+  };
+
   const handleClick = async (e) => {
     if (e.target.id.startsWith("delete-company-btn-")) {
       const idArray = e.target.id.split("-");
       // Get the employer number from the id
       const employerNo = idArray[3];
-
-      // Find the company with matching employer number
-      const companyToDelete = companies.find(
-        (company) => company.employer_no == employerNo
-      );
-
-      if (companyToDelete) {
-        // Confirm deletion with user
-        const confirmDelete = window.confirm(
-          `Are you sure you want to delete ${companyToDelete.name}?`
-        );
-
-        // If user confirms deletion, proceed with deletion
-        if (confirmDelete) {
-          try {
-            // Call the deleteCompany function with the employer number
-            await deleteCompany(employerNo);
-          } catch (error) {
-            alert(`An error occurred while deleting the company: \n${error}`);
-          }
-        }
-      } else {
-        alert("Company not found.");
-      }
+      await handleDeleteCompany(employerNo);
     } else if (e.target.id.startsWith("monthly-gen-")) {
       const match_employer_no = e.target.id.match(/^monthly-gen-(.+)$/);
       if (match_employer_no) {
         const employer_no = match_employer_no[1];
-        setPaymentProcessingState(true);
-        if (employer_no == "all") {
-          monthly_gen_companies(companies, paymentStatus);
-        } else {
-          const company = companies.find((c) => c.employer_no === employer_no);
-          monthly_gen_company(company, paymentStatus[employer_no].period);
-          alert(
-            "Monthly details generated for " +
-              company.name +
-              " - " +
-              paymentStatus[employer_no].period
-          );
-        }
-        setPaymentProcessingState(false);
+        handleMonthlyGen(employer_no);
       }
     } else if (e.target.id.startsWith("payment-gen-")) {
       const match_employer_no = e.target.id.match(/^payment-gen-(.+)$/);
       if (match_employer_no) {
         const employer_no = match_employer_no[1];
-        setPaymentProcessingState(true);
-        if (employer_no == "all") {
-          await payment_gen_companies(companies, paymentStatus);
-        } else {
-          const company = companies.find((c) => c.employer_no === employer_no);
-          await payment_gen_company(company, paymentStatus[employer_no].period);
-          // alert(
-          //   "Monthly details generated for " +
-          //     company.name +
-          //     " - " +
-          //     monthlyStatus[employer_no].period
-          // );
-        }
-        setPaymentProcessingState(false);
+        await handlePaymentGen(employer_no);
       }
     } else if (
       e.target.id.startsWith("pdf-gen-") ||
       e.target.id.startsWith("pdf-print-gen-")
     ) {
-      let match_employer_no;
-      let printable;
-      let type;
-      let final_type;
-
-      if (e.target.id.startsWith("pdf-print-gen-")) {
-        const match = e.target.id.match(/^pdf-print-gen-(.+)$/);
-        if (match) {
-          match_employer_no = match[1];
-          printable = true;
-        }
-      } else {
-        let match = e.target.id.match(/^pdf-gen-(\w+)-(.+)$/);
-        // Ensure we have a valid match
-        if (match) {
-          type = match[1]; // Extracted type (e.g., all, salary, epf, etf, payslips)
-          match_employer_no = match[2]; // Extracted employer_no
-          printable = false;
-        } else {
-          match_employer_no = "all";
-          printable = false;
-        }
-      }
-
-      if (match_employer_no) {
-        const employer_no = match_employer_no;
-
-        if (employer_no === "all") {
-          // Check if all the periods are the same, if not alert
-          final_type = "";
-          const periods = [];
-          for (const employer_no in paymentStatus) {
-            periods.push(paymentStatus[employer_no].period);
-          }
-          if (new Set(periods).size !== 1) {
-            alert(
-              "Periods are not the same for all companies. Please select the same period for all companies."
-            );
-          } else {
-            await download_pdf_all(periods[0], printable);
-          }
-        } else {
-          const company = companies.find((c) => c.employer_no === employer_no);
-          if (company) {
-            const monthly_payment = company.monthly_payments.find(
-              (p) => p.period === paymentStatus[company.employer_no].period
-            );
-            if (monthly_payment) {
-              final_type = printable ? "all_printable" : type;
-              await download_pdf(company, monthly_payment.period, final_type);
-            }
-          }
-        }
+      await handlePdfGen(e.target.id);
+    } else if (e.target.id.startsWith("auto-gen-")) {
+      const match = e.target.id.match(/^auto-gen-(.+)$/);
+      if (match) {
+        const employer_no = match[1];
+        handleAutoGen(employer_no);
       }
     } else if (e.target.id === "save-companies-btn") {
-      let success = await updateMonthlyAddedCompanies();
-      if (success) {
-        alert("Companies updated successfully.");
-      } else {
-        alert("An error occurred while updating companies.");
-      }
+      await handleSaveCompanies();
     } else if (e.target.id === "delete-monthly-btn") {
-      //confirm
-
-      const confirmDelete = window.confirm(
-        "Are you sure you want to remove the selected monthly details?\n" +
-          getMonthlyDetailsCompaniesandPeriod(monthlyDetails).join(",\n")
-      );
-      if (confirmDelete) {
-        delete_monthly(monthlyDetails, companies);
-      }
+      handleDeleteMonthly();
     }
   };
 
@@ -967,7 +1006,7 @@ function CompaniesTable() {
     if (!payment) return null;
 
     return (
-      <div className="payment-details">
+      <div className="payment-details shadow">
         <div className="h6 card-header">{"Payment Details"}</div>
         <table className="card-body table table-hover">
           <thead>
@@ -1079,7 +1118,7 @@ function CompaniesTable() {
 
   const MonthlyDetails = ({ monthlyDetails, companies, monthly_payments }) => {
     return (
-      <div>
+      <div className="shadow">
         {Object.entries(monthlyDetails).map(([employer_no, employees]) => {
           const allEmployeeDetails = Object.values(employees).flatMap(
             (details) => details
@@ -1113,7 +1152,7 @@ function CompaniesTable() {
                     <div className="">
                       <div className="h6 card-header">{period}</div>
                       <table
-                        className="card-body table table-hover"
+                        className="card-body table table-hover shadow"
                         style={{ overflowY: "auto", maxHeight: "500px" }}
                       >
                         <thead>
@@ -1196,6 +1235,19 @@ function CompaniesTable() {
         <div className="h4">No companies found.</div>
       ) : (
         <div>
+          {/*loading screen saying processing */}
+          {paymentProcessingState && (
+            <div
+              className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center"
+              style={{ zIndex: 1000 }}
+            >
+              <div className="spinner-border text-light" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="ms-3 text-light">Processing...</p>
+            </div>
+          )}
+
           <p className="h5">Select columns to display:</p>
           <div className="d-flex flex-wrap">
             {fields.map((field) => {
@@ -1308,7 +1360,7 @@ function CompaniesTable() {
           </div>
 
           <div
-            className="mt-2"
+            className="mt-5 mb-5"
             style={{ overflowY: "auto", maxHeight: "500px" }}
           >
             <table className="table table-responsive table-hover">
@@ -1320,7 +1372,7 @@ function CompaniesTable() {
                         switch (field) {
                           case "monthly_gen":
                             return (
-                              <th key={field + "title"}>
+                              <th key={field + "title"} className="shadow">
                                 <TableKey key_name={field} />
                                 <button
                                   id={"monthly-gen-all"}
@@ -1334,7 +1386,7 @@ function CompaniesTable() {
                             );
                           case "payment_gen":
                             return (
-                              <th key={field + "title"}>
+                              <th key={field + "title"} className="shadow">
                                 <TableKey key_name={field} />
                                 <button
                                   id={"payment-gen-all"}
@@ -1348,7 +1400,7 @@ function CompaniesTable() {
                             );
                           case "pdf_gen":
                             return (
-                              <th key={field + "title"}>
+                              <th key={field + "title"} className="shadow">
                                 <TableKey key_name={field} />
                                 <button
                                   id={"pdf-gen-all"}
@@ -1363,7 +1415,7 @@ function CompaniesTable() {
 
                           case "pdf_print_gen":
                             return (
-                              <th key={field + "title"}>
+                              <th key={field + "title"} className="shadow">
                                 <TableKey key_name={field} />
                                 <button
                                   id={"pdf-print-gen-all"}
@@ -1376,9 +1428,24 @@ function CompaniesTable() {
                               </th>
                             );
 
+                          case "auto_gen":
+                            return (
+                              <th key={field + "title"} className="shadow">
+                                <TableKey key_name={field} />
+                                <button
+                                  id={"auto-gen-all"}
+                                  className="btn btn-outline-success text-left m-1 shadow"
+                                  onClick={handleClick}
+                                  disabled={paymentProcessingState}
+                                >
+                                  Gen all
+                                </button>
+                              </th>
+                            );
+
                           default:
                             return (
-                              <th key={field + "title"}>
+                              <th key={field + "title"} className="shadow">
                                 <TableKey key_name={field} />
                               </th>
                             );
@@ -1398,7 +1465,10 @@ function CompaniesTable() {
                             switch (field) {
                               case "active":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <div className="form-check form-switch">
                                       <CheckBoxInput
                                         key_name={
@@ -1413,7 +1483,10 @@ function CompaniesTable() {
 
                               case "monthly_include":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <div className="form-check form-switch">
                                       <CheckBoxInput
                                         key_name={
@@ -1431,7 +1504,10 @@ function CompaniesTable() {
                               case "epf_cheque_no":
                               case "etf_cheque_no":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <TextInput
                                       key_name={
                                         field + "-" + company.employer_no
@@ -1463,7 +1539,10 @@ function CompaniesTable() {
                               case "epf_paid_day":
                               case "etf_paid_day":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <DateInput
                                       key_name={
                                         field + "-" + company.employer_no
@@ -1477,7 +1556,10 @@ function CompaniesTable() {
 
                               case "gen_period":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <MonthInput
                                       key_name={
                                         "monthly-period-" + company.employer_no
@@ -1491,7 +1573,10 @@ function CompaniesTable() {
 
                               case "monthly_gen":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <button
                                       id={"monthly-gen-" + company.employer_no}
                                       className="btn btn-outline-dark text-left m-1"
@@ -1519,7 +1604,10 @@ function CompaniesTable() {
 
                               case "payment_gen":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <button
                                       id={"payment-gen-" + company.employer_no}
                                       className="btn btn-outline-dark text-left m-1"
@@ -1533,7 +1621,10 @@ function CompaniesTable() {
 
                               case "pdf_gen":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <button
                                       id={"pdf-gen-all-" + company.employer_no}
                                       className="btn btn-outline-dark text-left m-1"
@@ -1584,7 +1675,10 @@ function CompaniesTable() {
 
                               case "pdf_print_gen":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <button
                                       id={
                                         "pdf-print-gen-" + company.employer_no
@@ -1598,9 +1692,29 @@ function CompaniesTable() {
                                   </td>
                                 );
 
+                              case "auto_gen":
+                                return (
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
+                                    <button
+                                      id={"auto-gen-" + company.employer_no}
+                                      className="btn btn-outline-dark text-left m-1"
+                                      onClick={handleClick}
+                                      disabled={paymentProcessingState}
+                                    >
+                                      Gen
+                                    </button>
+                                  </td>
+                                );
+
                               case "view":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <Link
                                       to={
                                         "./" +
@@ -1616,7 +1730,10 @@ function CompaniesTable() {
 
                               case "delete":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     <button
                                       className="btn btn-outline-danger text-left m-1"
                                       id={
@@ -1632,13 +1749,19 @@ function CompaniesTable() {
 
                               case "active_employees":
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     {company["active_employees_count"]}
                                   </td>
                                 );
                               default:
                                 return (
-                                  <td key={company.employer_no + field}>
+                                  <td
+                                    key={company.employer_no + field}
+                                    className="shadow"
+                                  >
                                     {company[field]}
                                   </td>
                                 );
@@ -1650,7 +1773,7 @@ function CompaniesTable() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" className="text-center">
+                    <td colSpan="5" className="text-center shadow">
                       No companies found.
                     </td>
                   </tr>

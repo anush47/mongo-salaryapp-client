@@ -563,6 +563,17 @@ function MonthlyEmployeeDetailsTable({
 
   return (
     <div>
+      {processingState && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center"
+          style={{ zIndex: 1000 }}
+        >
+          <div className="spinner-border text-light" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="ms-3 text-light">Processing...</p>
+        </div>
+      )}
       <div className="mb-3 d-flex align-items-center">
         <p className="h6 me-2">Period :</p>{" "}
         <MonthInput

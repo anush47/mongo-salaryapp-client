@@ -11,54 +11,65 @@ import {
 } from "../Components/InputComponents";
 
 const abhLabels = {
-  fullName: "Full Name",
-  otherNames: "Other Names",
-  employerNo: "Employer Number",
-  epfNo: "EPF Number",
-  address: "Address",
-  nationality: "Nationality",
-  nic: "NIC",
-  placeOfBirth: "Place of Birth",
-  marriedOrSingle: "Married or Single",
-  spouseName: "Spouse Name (Husband/Wife)",
-  fatherName: "Father's Name",
-  fatherBirthPlace: "Father's Birthplace",
-  motherName: "Mother's Name",
-  fatherFatherName: "Paternal Grandfather's Name (Father's Side)",
-  fatherFatherBirthPlace: "Paternal Grandfather's Birthplace (Father's Side)",
-  motherFatherName: "Maternal Grandfather's Name (Mother's Side)",
-  motherFatherBirthPlace: "Maternal Grandfather's Birthplace (Mother's Side)",
-  lastEmployerName: "Last Employer's Name",
-  lastEmployerAddress: "Last Employer's Address",
-  lastEmployment: "Last Employment",
-  lastEmploymentPeriod: "Last Employment Period",
-  nominations: "Nominations",
-  employer: "Employer",
-  employerAddress: "Employer's Address",
-  employment: "Employment",
-  employedDate: "Employed Date",
-  grossSalary: "Gross Salary",
-  date: "Date",
-  witnessName: "Witness Name",
-  witnessPosition: "Witness Position",
-  witnessAddress: "Witness Address",
+  fullName: "Full Name 👤",
+  otherNames: "Other Names 📇",
+  employerNo: "Employer Number 🔢",
+  epfNo: "EPF Number 📄",
+  address: "Address 🏠",
+  nationality: "Nationality 🌍",
+  nic: "NIC 🆔",
+  placeOfBirth: "Place of Birth 🌍",
+  marriedOrSingle: "Married or Single 💍",
+  spouseName: "Spouse Name (Husband/Wife) 👩‍❤️‍👨",
+  fatherName: "Father's Name 👴",
+  fatherBirthPlace: "Father's Birthplace 🏠",
+  motherName: "Mother's Name 👵",
+  fatherFatherName: "Paternal Grandfather's Name (Father's Side) 👴",
+  fatherFatherBirthPlace:
+    "Paternal Grandfather's Birthplace (Father's Side) 🏠",
+  motherFatherName: "Maternal Grandfather's Name (Mother's Side) 👵",
+  motherFatherBirthPlace:
+    "Maternal Grandfather's Birthplace (Mother's Side) 🏠",
+  lastEmployerName: "Last Employer's Name 🏢",
+  lastEmployerAddress: "Last Employer's Address 🏢",
+  lastEmployment: "Last Employment 📅",
+  lastEmploymentPeriod: "Last Employment Period 📅",
+  nominations: "Nominations 📜",
+  employer: "Employer 🏢",
+  employerAddress: "Employer's Address 🏢",
+  employment: "Employment 📅",
+  employedDate: "Employed Date 📅",
+  grossSalary: "Gross Salary 💰",
+  date: "Date 📅",
+  witnessName: "Witness Name 👥",
+  witnessPosition: "Witness Position 👤",
+  witnessAddress: "Witness Address 🏠",
 };
 
 const TableKey = ({ key_name }) => {
   return (
-    <td scope="col" width="400rem" className="h6 text-end">
+    <td scope="col" style={{ width: "30vw" }} className="h6 text-end">
       {`${abhLabels[key_name].toUpperCase()} : `}
     </td>
   );
 };
 
 const AbhFillForm = () => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading completion after initial render
+    setIsLoading(false);
+  }, []);
+
   var { employer_no, epf_no } = useParams();
   // format employer_no
   employer_no = employer_no.replace(/-/g, "/");
 
   const [company, setCompany] = useState({});
   const [employee, setEmployee] = useState({});
+
+  const [paymentProcessingState, setPaymentProcessingState] = useState(false);
 
   const defaultHeight = "1rem";
 
@@ -190,6 +201,7 @@ const AbhFillForm = () => {
   };
 
   const downloadABH = async (data) => {
+    setPaymentProcessingState(true);
     try {
       const response = await axios.post(
         process.env.REACT_APP_SERVER_URL + "/generate-abh",
@@ -208,6 +220,8 @@ const AbhFillForm = () => {
       link.remove(); // Clean up
     } catch (error) {
       console.error("Error downloading ABH PDF:", error);
+    } finally {
+      setPaymentProcessingState(false);
     }
   };
 
@@ -313,71 +327,92 @@ const AbhFillForm = () => {
   };
 
   return (
-    <div>
-      <Header title={`ABH Form - ${employee.name} - ${company.name}`} />
-      <div className="container">
-        <hr className="my-3" />
-        <div className="h3 text-center m-2">DETAILS</div>
-        <hr className="my-3" />
-        <table className="table table-hover table-responsive">
-          <tbody>
-            {Object.keys(abhData).map((key) => {
-              switch (key) {
-                case "marriedOrSingle":
-                  return (
-                    <tr key={key}>
-                      <TableKey key_name={key} />
-                      <td>
-                        <DropdownInput
-                          keyName={key}
-                          value={abhData[key]}
-                          handleChangeFunction={handleChange}
-                          optionKeys={["MARRIED", "SINGLE"]}
-                          optionVals={["MARRIED", "SINGLE"]}
-                          height={defaultHeight}
-                        />
-                      </td>
-                    </tr>
-                  );
-
-                case "nominations":
-                  return null;
-
-                case "date":
-                case "employedDate":
-                  return <DateRow key={key} key_name={key} />;
-
-                default:
-                  return <TextRow key={key + "hee"} key_name={key} />;
-              }
-            })}
-          </tbody>
-        </table>
-
-        <hr className="my-3" />
-        <div className="h3 text-center m-3">NOMINATIONS</div>
-        <hr className="my-3" />
-        <div className="container">
-          <NominationTable />
-        </div>
-
-        <hr className="my-3" />
-        <div className="h3 text-center m-3">GENERATE PDF</div>
-        <hr className="my-3" />
-
-        <div className="container text-center">
-          <button
-            id="submit"
-            className="btn btn-success btn-lg shadow"
-            onClick={handleClick}
+    <div className="container mt-5">
+      <div
+        className={`mt-3 fade ${isLoading ? "fade-out" : "fade-in"}`}
+        style={{
+          transition: "opacity 0.25s ease-in-out",
+          opacity: isLoading ? 0 : 1,
+        }}
+      >
+        {paymentProcessingState && (
+          <div
+            className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center"
+            style={{ zIndex: 1000 }}
           >
-            GET ABH
-          </button>
-
-          <hr className="my-5" />
-          <div className="h6 text-center m-3">&copy; All Rights Reserved.</div>
+            <div className="spinner-border text-light" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="ms-3 text-light">Processing...</p>
+          </div>
+        )}
+        <Header title={`ABH Form - ${employee.name} - ${company.name}`} />
+        <div className="container">
           <hr className="my-3" />
-          <br />
+          <div className="h3 text-center m-2">DETAILS</div>
+          <hr className="my-3" />
+          <table className="table table-hover table-responsive">
+            <tbody>
+              {Object.keys(abhData).map((key) => {
+                switch (key) {
+                  case "marriedOrSingle":
+                    return (
+                      <tr key={key}>
+                        <TableKey key_name={key} />
+                        <td>
+                          <DropdownInput
+                            keyName={key}
+                            value={abhData[key]}
+                            handleChangeFunction={handleChange}
+                            optionKeys={["MARRIED", "SINGLE"]}
+                            optionVals={["MARRIED", "SINGLE"]}
+                            height={defaultHeight}
+                          />
+                        </td>
+                      </tr>
+                    );
+
+                  case "nominations":
+                    return null;
+
+                  case "date":
+                  case "employedDate":
+                    return <DateRow key={key} key_name={key} />;
+
+                  default:
+                    return <TextRow key={key + "hee"} key_name={key} />;
+                }
+              })}
+            </tbody>
+          </table>
+
+          <hr className="my-3" />
+          <div className="h3 text-center m-3">NOMINATIONS</div>
+          <hr className="my-3" />
+          <div className="container">
+            <NominationTable />
+          </div>
+
+          <hr className="my-3" />
+          <div className="h3 text-center m-3">GENERATE PDF</div>
+          <hr className="my-3" />
+
+          <div className="container text-center">
+            <button
+              id="submit"
+              className="btn btn-success btn-lg shadow"
+              onClick={handleClick}
+            >
+              GET ABH
+            </button>
+
+            <hr className="my-5" />
+            <div className="h6 text-center m-3">
+              &copy; All Rights Reserved.
+            </div>
+            <hr className="my-3" />
+            <br />
+          </div>
         </div>
       </div>
     </div>

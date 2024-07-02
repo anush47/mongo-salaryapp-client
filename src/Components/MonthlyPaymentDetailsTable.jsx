@@ -265,10 +265,15 @@ function MonthlyPaymentDetailsTable({
         break;
 
       case "payment-gen-btn":
+        if (!newPayment.period) {
+          alert(`Period cannot be blank.`);
+          return;
+        }
         setPaymentProcessingState(true);
         console.log(newPayment.period);
         change_new_accordingly(newPayment.period);
         break;
+
       default:
         if (e.target.id.startsWith("payment-del-btn-")) {
           const match = e.target.id.match(/^payment-del-btn-(.+)$/);
@@ -756,6 +761,17 @@ function MonthlyPaymentDetailsTable({
 
   return (
     <div>
+      {paymentProcessingState && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center"
+          style={{ zIndex: 1000 }}
+        >
+          <div className="spinner-border text-light" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="ms-3 text-light">Processing...</p>
+        </div>
+      )}
       <div className="mb-3 d-flex align-items-center">
         <p className="h6 me-2">Period :</p>{" "}
         <MonthInput
@@ -764,27 +780,6 @@ function MonthlyPaymentDetailsTable({
           value={""}
           disabled={paymentProcessingState}
         />
-        {/* {period && (
-          <div>
-            <button
-              id="payment-gen-btn"
-              onClick={handleClick}
-              className="btn btn-outline-success m-1"
-              disabled={paymentProcessingState}
-            >
-              Gen
-            </button>
-
-            <button
-              id="payment-add-btn"
-              onClick={handleClick}
-              className="btn btn-success m-1"
-              disabled={paymentProcessingState}
-            >
-              Add
-            </button>
-          </div>
-        )} */}
       </div>
 
       {/* <input

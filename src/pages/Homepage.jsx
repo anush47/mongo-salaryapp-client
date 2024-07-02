@@ -5,6 +5,12 @@ import { FiUser, FiLogOut } from "react-icons/fi";
 import axios from "axios";
 
 const Homepage = () => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading completion after initial render
+    setIsLoading(false);
+  }, []);
   const [user, setUser] = useState({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true); // Loading state for fetching user profile
@@ -45,55 +51,66 @@ const Homepage = () => {
 
   return (
     <div className="container mt-5">
-      <Header title="SALARY APP" />
-      <div className="row justify-content-center">
-        <div className="col-md-8">
-          <div className="bg-light rounded border shadow-lg p-4">
-            {loading ? (
-              <div className="text-center">
-                <p>Loading...</p>
-              </div>
-            ) : !isLoggedIn ? (
-              <div>
-                <h2 className="text-center mb-4 text-primary">
-                  Welcome to Salary App
-                </h2>
-                <p className="text-center">
-                  Your ultimate tool for managing company salaries.
-                </p>
-                <div className="text-center mt-4">
-                  <Link to="/login" className="btn btn-primary">
-                    Sign In
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <div>
-                    <h2 className="text-primary">Welcome, {user.name}!</h2>
-                    <p>Your ultimate tool for managing company salaries.</p>
-                  </div>
-                  <div className="d-flex align-items-center">
-                    <span className="me-3">{user?.email}</span>
-                    <Link to="/" className="me-3 text-dark">
-                      <FiUser size={24} />
-                    </Link>
-                    <button
-                      className="btn btn-outline-dark"
-                      onClick={handleSignOut}
-                    >
-                      <FiLogOut size={24} />
-                    </button>
-                  </div>
-                </div>
+      <div
+        className={`mt-3 fade ${isLoading ? "fade-out" : "fade-in"}`}
+        style={{
+          transition: "opacity 0.25s ease-in-out",
+          opacity: isLoading ? 0 : 1,
+        }}
+      >
+        <Header title="SALARY APP" />
+        <div className="row justify-content-center">
+          <div className="col-md-8">
+            <div className="bg-light rounded border shadow-lg p-4">
+              {loading ? (
                 <div className="text-center">
-                  <Link to="/companies" className="btn btn-outline-dark">
-                    View Companies
-                  </Link>
+                  <p>Loading...</p>
                 </div>
-              </div>
-            )}
+              ) : !isLoggedIn ? (
+                <div>
+                  <h2 className="text-center mb-4 text-dark">
+                    Welcome to Salary App
+                  </h2>
+                  <p className="text-center">
+                    Your ultimate tool for managing company salaries.
+                  </p>
+                  <div className="text-center mt-4">
+                    <Link to="/login" className="btn btn-dark shadow">
+                      Sign In
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                      <h2 className="text-primary">Welcome, {user.name}!</h2>
+                      <p>Your ultimate tool for managing company salaries.</p>
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <span className="me-3">{user?.email}</span>
+                      <Link to="/" className="me-3 text-dark">
+                        <FiUser size={24} />
+                      </Link>
+                      <button
+                        className="btn btn-outline-dark shadow"
+                        onClick={handleSignOut}
+                      >
+                        <FiLogOut size={24} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <Link
+                      to="/companies"
+                      className="btn btn-outline-dark shadow"
+                    >
+                      View Companies
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
